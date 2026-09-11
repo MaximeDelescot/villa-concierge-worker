@@ -181,7 +181,10 @@
   .msg-bubble{ max-width:80%; padding:9px 13px; border-radius:14px; font-size:13.5px; line-height:1.45; white-space:pre-wrap; }
   .msg-bubble.user{ align-self:flex-end; background:var(--accent); color:var(--accent-contrast); border-bottom-right-radius:4px; }
   .msg-bubble.assistant{ align-self:flex-start; background:var(--surface-2); color:var(--ink); border-bottom-left-radius:4px; }
+  .msg-bubble.manager{ align-self:flex-start; background:var(--accent-soft); color:var(--ink); border:1px solid var(--accent); border-bottom-left-radius:4px; }
+  .msg-manager-label{ display:block; font-size:11px; font-weight:600; text-transform:uppercase; letter-spacing:.04em; color:var(--accent); margin-bottom:2px; }
   .convo-thread .msg-bubble{ max-width:100%; }
+  .convo-reply-form{ margin-top:10px; }
 
   /* guest app */
   .guest-app{ display:flex; flex-direction:column; height:100dvh; height:100vh; background:var(--bg); max-width:560px; margin:0 auto; }
@@ -235,6 +238,7 @@
     { id: "checkinout", label: "Check-in / Check-out", emoji: "🔑" },
     { id: "wifi", label: "WiFi", emoji: "📶" },
     { id: "rules", label: "Règles de la villa", emoji: "📋" },
+    { id: "pets", label: "Animaux de compagnie", emoji: "🐾" },
     { id: "equipment", label: "Équipements", emoji: "🛠️" },
     { id: "appliances", label: "Appareils électroménagers", emoji: "🧺" },
     { id: "ac", label: "Climatisation", emoji: "❄️" },
@@ -477,6 +481,7 @@
     deleteKnowledge: function (villaId, itemId) { return apiFetch("/villas/" + villaId + "/knowledge/" + itemId, { method: "DELETE" }); },
     listConversations: function (villaId) { return apiFetch("/villas/" + villaId + "/conversations"); },
     setConversationHandled: function (villaId, convoId, handled) { return apiFetch("/villas/" + villaId + "/conversations/" + convoId, { method: "PATCH", body: { handled: handled } }); },
+    sendManagerReply: function (villaId, convoId, message) { return apiFetch("/villas/" + villaId + "/conversations/" + convoId + "/reply", { method: "POST", body: { message: message } }); },
     chat: function (villaId, sessionId, message) { return apiFetch("/villas/" + villaId + "/chat", { method: "POST", body: { sessionId: sessionId, message: message } }); },
     getSession: function (villaId, sessionId) { return apiFetch("/villas/" + villaId + "/session/" + sessionId); },
     authCheck: function () { return apiFetch("/auth/check", { method: "POST", body: {} }); }
@@ -552,6 +557,13 @@
       return api.listConversations(villaId).then(function (data) { setConvos(data); }).catch(function () { setConvos([]); });
     }, [authed, villaId]);
     useEffect(function () { reload(); }, [reload]);
+    // Auto-refresh so a new guest question (or a reply sent from another
+    // tab) shows up here without the manager having to reload the page.
+    useEffect(function () {
+      if (!authed || !villaId) return;
+      var interval = setInterval(reload, 8000);
+      return function () { clearInterval(interval); };
+    }, [authed, villaId, reload]);
     return [convos, reload];
   }
 
@@ -1021,6 +1033,26 @@
     var firstUser = null;
     for (var i = 0; i < messages.length; i++) { if (messages[i].role === "user") { firstUser = messages[i]; break; } }
     var needing = convo.needsHuman && !convo.handled;
+    var sReply = useState(""); var replyText = sReply[0], setReplyText = sReply[1];
+    var sSending = useState(false); var sendingReply = sSending[0], setSendingReply = sSending[1];
+    var sReplyErr = useState(""); var replyErr = sReplyErr[0], setReplyErr = sReplyErr[1];
+
+    function sendReply(ev) {
+      ev.preventDefault();
+      var trimmed = replyText.trim();
+      if (!trimmed || sendingReply) return;
+      setSendingReply(true);
+      setReplyErr("");
+      api.sendManagerReply(props.villaId, convo.id, trimmed).then(function () {
+        setSendingReply(false);
+        setReplyText("");
+        props.onChanged();
+      }).catch(function () {
+        setSendingReply(false);
+        setReplyErr("Échec de l'envoi — réessayez.");
+      });
+    }
+
     return e("div", { className: "convo-row" },
       e("button", { className: "convo-summary", onClick: props.onToggle },
         e("span", { className: "convo-badge" + (needing ? " warn" : "") }, needing ? "A traiter" : (convo.needsHuman ? "Traitee" : "Resolue auto")),
@@ -1028,7 +1060,21 @@
         e("span", { className: "convo-time" }, formatDate(convo.updatedAt) + " " + formatTime(convo.updatedAt))
       ),
       props.open ? e("div", { className: "convo-thread" },
-        messages.map(function (m, idx) { return e("div", { key: idx, className: "msg-bubble " + m.role }, m.content); }),
+        messages.map(function (m, idx) {
+          return e("div", { key: idx, className: "msg-bubble " + m.role },
+            m.role === "manager" ? e("span", { className: "msg-manager-label" }, "Vous (propriétaire)") : null,
+            m.content
+          );
+        }),
+        e("form", { className: "row gap convo-reply-form", onSubmit: sendReply },
+          e("input", {
+            className: "input", placeholder: "Répondre au guest en votre nom…",
+            value: replyText, disabled: sendingReply,
+            onChange: function (ev) { setReplyText(ev.target.value); }
+          }),
+          e(Button, { type: "submit", small: true, disabled: sendingReply || !replyText.trim() }, sendingReply ? "…" : "Envoyer")
+        ),
+        replyErr ? e("p", { className: "error-text small" }, replyErr) : null,
         convo.needsHuman ? e("div", { className: "row gap", style: { marginTop: "10px" } },
           e(Button, {
             small: true, variant: convo.handled ? "ghost" : "primary",
@@ -1202,6 +1248,24 @@
       }).catch(function () { setLoadedHistory(true); });
     }, [villaId, sessionId]);
 
+    // Poll for new messages so a reply the owner types from the manager
+    // dashboard shows up here without the guest having to send anything.
+    var sendingRef = useRef(sending);
+    useEffect(function () { sendingRef.current = sending; }, [sending]);
+    var messagesRef = useRef(messages);
+    useEffect(function () { messagesRef.current = messages; }, [messages]);
+    useEffect(function () {
+      if (!villaId || !loadedHistory) return;
+      var interval = setInterval(function () {
+        if (sendingRef.current) return; // an AI reply is already in flight
+        api.getSession(villaId, sessionId).then(function (data) {
+          var fresh = data.messages || [];
+          if (fresh.length !== messagesRef.current.length) setMessages(fresh);
+        }).catch(function () {});
+      }, 6000);
+      return function () { clearInterval(interval); };
+    }, [villaId, sessionId, loadedHistory]);
+
     useEffect(function () {
       if (scrollRef.current) scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
     }, [messages, sending]);
@@ -1243,7 +1307,12 @@
         messages.length === 0 ? e("div", { className: "guest-welcome" },
           e("p", null, "Hi! Ask me anything about your stay — check-in, WiFi, the villa's equipment, or local recommendations.")
         ) : null,
-        messages.map(function (m, idx) { return e("div", { key: idx, className: "msg-bubble " + m.role }, m.content); }),
+        messages.map(function (m, idx) {
+          return e("div", { key: idx, className: "msg-bubble " + m.role },
+            m.role === "manager" ? e("span", { className: "msg-manager-label" }, "Réponse du propriétaire") : null,
+            m.content
+          );
+        }),
         sending ? e("div", { className: "row gap" },
           e("div", { className: "msg-bubble assistant typing" }, e("span", { className: "dot" }), e("span", { className: "dot" }), e("span", { className: "dot" }))
         ) : null

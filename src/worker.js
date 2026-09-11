@@ -18,6 +18,8 @@
 //     DELETE /api/villas/:id/knowledge/:itemId
 //     GET    /api/villas/:id/conversations
 //     PATCH  /api/villas/:id/conversations/:cid { handled }
+//     POST   /api/villas/:id/conversations/:cid/reply { message } — owner
+//            replies in their own name, no AI call
 //     POST   /api/auth/check                    (any body) — 200 if the bearer token is valid
 //
 //   Public (no auth — this is what a guest's browser calls):
@@ -79,6 +81,7 @@ const CATEGORY_LABELS = {
   checkinout: "Check-in / Check-out",
   wifi: "WiFi",
   rules: "Règles de la villa",
+  pets: "Animaux de compagnie",
   equipment: "Équipements",
   appliances: "Appareils électroménagers",
   ac: "Climatisation",
@@ -349,6 +352,29 @@ function rowToConversation(r) {
   };
 }
 
+async function addManagerReply(env, villaId, convoId, body) {
+  const message = String(body.message || "").trim().slice(0, 4000);
+  if (!message) return err(400, "message is required");
+  const row = await env.DB.prepare("SELECT * FROM conversations WHERE id = ? AND villa_id = ?")
+    .bind(convoId, villaId)
+    .first();
+  if (!row) return err(404, "conversation not found");
+  let messages = [];
+  try {
+    messages = JSON.parse(row.messages_json || "[]");
+  } catch (e) {}
+  const managerMsg = { role: "manager", content: message, ts: nowIso() };
+  const newMessages = messages.concat([managerMsg]);
+  const ts = nowIso();
+  // A reply from the manager counts as the conversation having been taken
+  // care of by a human, so clear the "needs attention" flag. `handled` stays
+  // a separate, manually-toggled marker.
+  await env.DB.prepare("UPDATE conversations SET messages_json = ?, updated_at = ?, needs_human = 0 WHERE id = ?")
+    .bind(JSON.stringify(newMessages), ts, row.id)
+    .run();
+  return json({ ok: true });
+}
+
 async function updateConversationHandled(env, villaId, convoId, body) {
   const res = await env.DB.prepare(
     "UPDATE conversations SET handled = ? WHERE id = ? AND villa_id = ?"
@@ -421,11 +447,13 @@ async function chat(env, villaId, body) {
   const ts = nowIso();
 
   if (convoRow) {
-    const prevNeeds = !!convoRow.needs_human;
+    // The flag reflects only the latest exchange: it clears the moment the
+    // AI manages to answer on its own, and is set again the moment it asks
+    // for the manager's help — it is not sticky across turns.
     await env.DB.prepare(
       "UPDATE conversations SET messages_json = ?, updated_at = ?, needs_human = ? WHERE id = ?"
     )
-      .bind(JSON.stringify(newMessages), ts, prevNeeds || !answered ? 1 : 0, convoRow.id)
+      .bind(JSON.stringify(newMessages), ts, answered ? 0 : 1, convoRow.id)
       .run();
   } else {
     await env.DB.prepare(
@@ -527,8 +555,15 @@ export default {
             if (request.method === "GET") return await listConversations(env, villaId);
             return err(405, "method not allowed");
           }
-          if (request.method === "PATCH") return await updateConversationHandled(env, villaId, convoId, await readJson(request));
-          return err(405, "method not allowed");
+          const convoSub = parts[5];
+          if (!convoSub) {
+            if (request.method === "PATCH") return await updateConversationHandled(env, villaId, convoId, await readJson(request));
+            return err(405, "method not allowed");
+          }
+          if (convoSub === "reply" && request.method === "POST") {
+            return await addManagerReply(env, villaId, convoId, await readJson(request));
+          }
+          return err(404, "not found");
         }
       }
 
