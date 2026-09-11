@@ -1,0 +1,1323 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Villa Concierge</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Inter:wght@400;500;600;700&display=swap">
+<style>
+  :root{
+    --bg:#F6F4EF; --surface:#FFFFFF; --surface-2:#EDEAE2; --border:#E1DDD1;
+    --ink:#1B211C; --ink-dim:#5C6259; --ink-faint:#8B9186;
+    --accent:#1F6F5C; --accent-ink:#0F3B30; --accent-soft:#E4EFE9; --accent-contrast:#FFFFFF;
+    --gold:#B4842A;
+    --warn:#B5561F; --warn-soft:#F6E4D6;
+    --good:#1F6F5C; --good-soft:#E4EFE9;
+    --danger:#A33B32; --danger-soft:#F5E1DE;
+    --shadow: 0 1px 2px rgba(27,33,28,0.06), 0 6px 20px -8px rgba(27,33,28,0.12);
+    --radius: 14px;
+    color-scheme: light;
+  }
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]){
+      --bg:#141A15; --surface:#1B221C; --surface-2:#232B24; --border:#303A31;
+      --ink:#EDEEE9; --ink-dim:#A6AEA3; --ink-faint:#727B70;
+      --accent:#49B695; --accent-ink:#CFF0E4; --accent-soft:#1E3830; --accent-contrast:#0B1210;
+      --gold:#D9A94B;
+      --warn:#E38A52; --warn-soft:#3A2A1D;
+      --good:#49B695; --good-soft:#1E3830;
+      --danger:#E4776C; --danger-soft:#3B2320;
+      --shadow: 0 1px 2px rgba(0,0,0,0.3), 0 8px 24px -8px rgba(0,0,0,0.5);
+      color-scheme: dark;
+    }
+  }
+  :root[data-theme="dark"]{
+    --bg:#141A15; --surface:#1B221C; --surface-2:#232B24; --border:#303A31;
+    --ink:#EDEEE9; --ink-dim:#A6AEA3; --ink-faint:#727B70;
+    --accent:#49B695; --accent-ink:#CFF0E4; --accent-soft:#1E3830; --accent-contrast:#0B1210;
+    --gold:#D9A94B;
+    --warn:#E38A52; --warn-soft:#3A2A1D;
+    --good:#49B695; --good-soft:#1E3830;
+    --danger:#E4776C; --danger-soft:#3B2320;
+    --shadow: 0 1px 2px rgba(0,0,0,0.3), 0 8px 24px -8px rgba(0,0,0,0.5);
+    color-scheme: dark;
+  }
+  *{box-sizing:border-box;}
+  html,body{ margin:0; padding:0; }
+  body{ background:var(--bg); }
+  #approot{ font-family:'Inter',system-ui,sans-serif; color:var(--ink); background:var(--bg); min-height:100vh; }
+  h1,h2,h3{ font-family:'Fraunces',Georgia,serif; font-weight:600; margin:0; text-wrap:balance; }
+  p{ margin:0; }
+  input,textarea,button{ font-family:inherit; font-size:14px; color:inherit; }
+  .muted{ color:var(--ink-dim); }
+  .small{ font-size:12.5px; }
+  .center{ text-align:center; }
+  .stack{ display:flex; flex-direction:column; gap:12px; }
+  .stack.lg{ gap:22px; }
+  .row{ display:flex; align-items:center; }
+  .row.gap{ gap:10px; }
+  .row.end{ justify-content:flex-end; }
+
+  /* top bar */
+  .topbar{ display:flex; align-items:center; justify-content:space-between; padding:16px 28px; border-bottom:1px solid var(--border); background:var(--surface); }
+  .brand{ display:flex; align-items:center; gap:10px; font-family:'Fraunces',serif; font-weight:600; font-size:18px; cursor:pointer; background:none; border:none; color:var(--ink); }
+  .brand-mark{ width:30px; height:30px; border-radius:9px; background:var(--accent); color:var(--accent-contrast); display:flex; align-items:center; justify-content:center; font-size:16px; }
+  .topbar-tag{ color:var(--ink-faint); font-size:12.5px; }
+
+  .page{ max-width:960px; margin:0 auto; padding:32px 24px 80px; }
+  .page-head{ display:flex; align-items:flex-start; justify-content:space-between; gap:16px; margin-bottom:22px; flex-wrap:wrap; }
+  .page-title{ font-size:28px; margin-bottom:6px; }
+  .page-sub{ color:var(--ink-dim); font-size:14.5px; }
+  .link-back{ background:none; border:none; color:var(--ink-dim); font-size:13px; cursor:pointer; padding:0; margin-bottom:14px; }
+  .link-back:hover{ color:var(--ink); }
+  .link-danger{ background:none; border:none; color:var(--danger); font-size:13px; cursor:pointer; padding:0; }
+
+  /* buttons */
+  .btn{ border-radius:10px; padding:10px 16px; font-weight:600; font-size:13.5px; border:1px solid transparent; cursor:pointer; display:inline-flex; align-items:center; gap:6px; white-space:nowrap; transition:opacity .15s, transform .05s; text-decoration:none; }
+  .btn:active{ transform:translateY(1px); }
+  .btn:disabled{ opacity:.55; cursor:not-allowed; }
+  .btn-primary{ background:var(--accent); color:var(--accent-contrast); }
+  .btn-primary:hover:not(:disabled){ opacity:.92; }
+  .btn-ghost{ background:var(--surface-2); color:var(--ink); border-color:var(--border); }
+  .btn-ghost:hover:not(:disabled){ background:var(--border); }
+  .btn-small{ padding:6px 12px; font-size:12.5px; }
+  .icon-btn{ background:none; border:none; color:var(--ink-faint); cursor:pointer; font-size:14px; padding:4px 7px; border-radius:7px; }
+  .icon-btn:hover{ background:var(--surface-2); color:var(--ink); }
+  .icon-btn.danger{ color:var(--ink-faint); }
+  .icon-btn.danger:hover, .icon-btn.danger.armed{ color:var(--danger); background:var(--danger-soft); }
+
+  /* cards & grid */
+  .card{ background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); padding:18px 20px; box-shadow:var(--shadow); }
+  .grid-cards{ display:grid; grid-template-columns:repeat(auto-fill, minmax(230px,1fr)); gap:16px; }
+  .villa-card{ background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); padding:18px; box-shadow:var(--shadow); cursor:pointer; display:flex; flex-direction:column; gap:8px; }
+  .villa-card:hover{ border-color:var(--accent); }
+  .villa-card-head{ display:flex; align-items:center; justify-content:space-between; }
+  .villa-emoji{ font-size:22px; }
+  .villa-card-title{ font-size:17px; }
+  .villa-card-meta{ color:var(--ink-faint); font-size:12.5px; margin-bottom:4px; }
+
+  .empty-state{ text-align:center; padding:56px 20px; display:flex; flex-direction:column; align-items:center; gap:10px; }
+  .empty-icon{ font-size:34px; }
+  .loading-block{ display:flex; justify-content:center; padding:60px 0; }
+  .spinner{ width:26px; height:26px; border-radius:50%; border:3px solid var(--border); border-top-color:var(--accent); animation:spin .7s linear infinite; }
+  @keyframes spin{ to{ transform:rotate(360deg); } }
+
+  /* form fields */
+  .field{ display:flex; flex-direction:column; gap:6px; font-size:13px; }
+  .field-label{ font-weight:600; color:var(--ink-dim); font-size:12.5px; }
+  .input{ background:var(--surface); border:1px solid var(--border); border-radius:9px; padding:10px 12px; width:100%; outline:none; }
+  .input:focus{ border-color:var(--accent); }
+  .textarea{ resize:vertical; min-height:64px; font-family:inherit; }
+
+  /* modal */
+  .modal-overlay{ position:fixed; inset:0; background:rgba(20,22,18,.45); display:flex; align-items:center; justify-content:center; padding:20px; z-index:50; }
+  .modal{ background:var(--surface); border-radius:16px; width:100%; max-width:420px; box-shadow:var(--shadow); overflow:hidden; }
+  .modal-head{ display:flex; align-items:center; justify-content:space-between; padding:16px 18px; border-bottom:1px solid var(--border); }
+  .modal-body{ padding:18px; }
+
+  /* tabs */
+  .tabs{ display:flex; gap:4px; border-bottom:1px solid var(--border); margin-bottom:22px; overflow-x:auto; }
+  .tab{ background:none; border:none; padding:10px 14px; font-weight:600; font-size:13.5px; color:var(--ink-faint); cursor:pointer; border-bottom:2px solid transparent; white-space:nowrap; }
+  .tab.active{ color:var(--accent-ink); border-bottom-color:var(--accent); }
+
+  /* knowledge base */
+  .kb-progress{ display:flex; flex-direction:column; gap:6px; font-size:12.5px; color:var(--ink-dim); }
+  .progress-bar{ height:6px; background:var(--surface-2); border-radius:4px; overflow:hidden; }
+  .progress-fill{ height:100%; background:var(--accent); border-radius:4px; }
+  .cat-section{ border:1px solid var(--border); border-radius:12px; background:var(--surface); overflow:hidden; }
+  .cat-header{ width:100%; display:flex; align-items:center; gap:10px; padding:13px 16px; background:none; border:none; cursor:pointer; text-align:left; }
+  .cat-emoji{ font-size:17px; }
+  .cat-label{ font-weight:600; flex:1; font-size:14px; }
+  .cat-count{ background:var(--surface-2); color:var(--ink-dim); font-size:11.5px; font-weight:700; padding:2px 8px; border-radius:20px; }
+  .cat-count.empty{ background:transparent; color:var(--ink-faint); }
+  .cat-chevron{ color:var(--ink-faint); font-size:12px; }
+  .cat-body{ padding:0 16px 16px; display:flex; flex-direction:column; gap:10px; border-top:1px solid var(--border); padding-top:12px; }
+  .kb-item{ display:flex; gap:10px; align-items:flex-start; background:var(--surface-2); border-radius:10px; padding:10px 12px; }
+  .kb-item-photo{ width:44px; height:44px; object-fit:cover; border-radius:8px; flex-shrink:0; }
+  .kb-item-body{ flex:1; min-width:0; }
+  .kb-item-title{ font-weight:600; font-size:13.5px; }
+  .kb-item-content{ color:var(--ink-dim); font-size:13px; margin-top:2px; white-space:pre-wrap; }
+  .kb-item-actions{ display:flex; gap:2px; flex-shrink:0; }
+  .kb-form{ display:flex; flex-direction:column; gap:12px; background:var(--surface-2); padding:14px; border-radius:10px; }
+  .kb-photo-preview{ width:52px; height:52px; object-fit:cover; border-radius:8px; }
+  .error-text{ color:var(--danger); font-size:12.5px; }
+  .error-text.center{ text-align:center; }
+
+  /* qr panel */
+  .qr-panel{ display:grid; grid-template-columns:220px 1fr; gap:26px; align-items:start; }
+  @media (max-width:640px){ .qr-panel{ grid-template-columns:1fr; } }
+  .qr-card{ background:var(--surface); border:1px solid var(--border); border-radius:16px; padding:20px; text-align:center; box-shadow:var(--shadow); }
+  .qr-image{ width:100%; max-width:180px; image-rendering:pixelated; }
+  .qr-fallback{ font-size:40px; padding:40px 0; }
+  .qr-caption{ margin-top:12px; font-family:'Fraunces',serif; font-size:13px; color:var(--ink-dim); }
+
+  /* stats & conversations */
+  .stats-row{ display:grid; grid-template-columns:repeat(3,1fr); gap:12px; }
+  @media (max-width:640px){ .stats-row{ grid-template-columns:1fr; } }
+  .stat-tile{ background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:14px 16px; box-shadow:var(--shadow); }
+  .stat-value{ font-family:'Fraunces',serif; font-size:26px; font-variant-numeric:tabular-nums; }
+  .stat-tile.tone-warn .stat-value{ color:var(--warn); }
+  .stat-tile.tone-good .stat-value{ color:var(--good); }
+  .stat-label{ color:var(--ink-dim); font-size:12px; margin-top:2px; }
+  .block-title{ font-size:14px; margin-bottom:12px; }
+  .topic-bars{ display:flex; flex-direction:column; gap:8px; }
+  .topic-bar-row{ display:grid; grid-template-columns:150px 1fr 26px; align-items:center; gap:10px; font-size:12.5px; }
+  .topic-bar-label{ color:var(--ink-dim); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .topic-bar-track{ height:8px; background:var(--surface-2); border-radius:5px; overflow:hidden; }
+  .topic-bar-fill{ height:100%; background:var(--gold); border-radius:5px; }
+  .topic-bar-count{ text-align:right; font-variant-numeric:tabular-nums; color:var(--ink-dim); }
+  .chip{ border:1px solid var(--border); background:var(--surface); border-radius:20px; padding:6px 13px; font-size:12.5px; font-weight:600; color:var(--ink-dim); cursor:pointer; }
+  .chip.active{ background:var(--accent-soft); border-color:var(--accent); color:var(--accent-ink); }
+  .convo-list{ display:flex; flex-direction:column; gap:8px; }
+  .convo-row{ border:1px solid var(--border); border-radius:12px; background:var(--surface); overflow:hidden; }
+  .convo-summary{ width:100%; display:grid; grid-template-columns:auto 1fr auto; gap:12px; align-items:center; padding:12px 14px; background:none; border:none; cursor:pointer; text-align:left; }
+  .convo-badge{ font-size:11px; font-weight:700; padding:3px 9px; border-radius:20px; background:var(--good-soft); color:var(--good); white-space:nowrap; }
+  .convo-badge.warn{ background:var(--warn-soft); color:var(--warn); }
+  .convo-snippet{ font-size:13px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; color:var(--ink); }
+  .convo-time{ font-size:11.5px; color:var(--ink-faint); white-space:nowrap; }
+  .convo-thread{ padding:4px 14px 16px; border-top:1px solid var(--border); display:flex; flex-direction:column; gap:8px; padding-top:12px; }
+
+  .msg-bubble{ max-width:80%; padding:9px 13px; border-radius:14px; font-size:13.5px; line-height:1.45; white-space:pre-wrap; }
+  .msg-bubble.user{ align-self:flex-end; background:var(--accent); color:var(--accent-contrast); border-bottom-right-radius:4px; }
+  .msg-bubble.assistant{ align-self:flex-start; background:var(--surface-2); color:var(--ink); border-bottom-left-radius:4px; }
+  .convo-thread .msg-bubble{ max-width:100%; }
+
+  /* guest app */
+  .guest-app{ display:flex; flex-direction:column; height:100dvh; height:100vh; background:var(--bg); max-width:560px; margin:0 auto; }
+  .preview-overlay{ position:fixed; inset:0; background:var(--bg); z-index:60; display:flex; flex-direction:column; }
+  .preview-bar{ display:flex; align-items:center; justify-content:space-between; gap:10px; padding:9px 14px; background:var(--accent-soft); color:var(--accent-ink); border-bottom:1px solid var(--border); font-size:12px; font-weight:700; flex-shrink:0; }
+  .preview-body{ flex:1; min-height:0; display:flex; }
+  .preview-body .guest-app{ height:100%; max-width:none; flex:1; }
+  .guest-header{ display:flex; align-items:center; gap:12px; padding:16px 18px; border-bottom:1px solid var(--border); background:var(--surface); }
+  .guest-header-emoji{ font-size:22px; }
+  .guest-header-title{ font-family:'Fraunces',serif; font-weight:600; font-size:16.5px; }
+  .guest-header-sub{ font-size:11.5px; color:var(--ink-faint); }
+  .guest-messages{ flex:1; overflow-y:auto; padding:18px; display:flex; flex-direction:column; gap:10px; }
+  .guest-welcome{ color:var(--ink-dim); font-size:13.5px; padding:6px 2px 10px; }
+  .guest-suggestions{ display:flex; gap:8px; padding:0 18px 10px; flex-wrap:wrap; }
+  .guest-input-bar{ display:flex; gap:8px; padding:12px 14px calc(12px + env(safe-area-inset-bottom)); border-top:1px solid var(--border); background:var(--surface); }
+  .guest-input-bar .input{ flex:1; border-radius:22px; padding:11px 16px; }
+  .send-btn{ width:42px; height:42px; border-radius:50%; background:var(--accent); color:var(--accent-contrast); border:none; font-size:16px; cursor:pointer; flex-shrink:0; }
+  .send-btn:disabled{ opacity:.5; }
+  .center-msg{ align-items:center; justify-content:center; text-align:center; gap:8px; font-size:15px; }
+  .typing{ display:flex; gap:4px; padding:13px; }
+  .typing .dot{ width:6px; height:6px; border-radius:50%; background:var(--ink-faint); display:inline-block; animation:bounce 1.2s infinite; }
+  .typing .dot:nth-child(2){ animation-delay:.15s; }
+  .typing .dot:nth-child(3){ animation-delay:.3s; }
+  @keyframes bounce{ 0%,60%,100%{ transform:translateY(0); opacity:.5;} 30%{ transform:translateY(-4px); opacity:1;} }
+
+  /* login gate */
+  .login-wrap{ min-height:100vh; display:flex; align-items:center; justify-content:center; padding:24px; }
+  .login-card{ width:100%; max-width:340px; background:var(--surface); border:1px solid var(--border); border-radius:16px; padding:28px 26px; box-shadow:var(--shadow); }
+  .login-mark{ width:44px; height:44px; border-radius:12px; background:var(--accent); color:var(--accent-contrast); display:flex; align-items:center; justify-content:center; font-size:20px; margin-bottom:16px; }
+</style>
+</head>
+<body>
+<div id="approot"></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js"></script>
+<script>
+(function () {
+  "use strict";
+  var useState = React.useState, useEffect = React.useEffect, useRef = React.useRef,
+      useCallback = React.useCallback, useMemo = React.useMemo;
+  var e = React.createElement;
+
+  // ---------------------------------------------------------------------
+  // Categories (unchanged from the original design)
+  // ---------------------------------------------------------------------
+  var CATEGORIES = [
+    { id: "general", label: "Informations générales", emoji: "🏡" },
+    { id: "location", label: "Adresse et localisation", emoji: "📍" },
+    { id: "checkinout", label: "Check-in / Check-out", emoji: "🔑" },
+    { id: "wifi", label: "WiFi", emoji: "📶" },
+    { id: "rules", label: "Règles de la villa", emoji: "📋" },
+    { id: "equipment", label: "Équipements", emoji: "🛠️" },
+    { id: "appliances", label: "Appareils électroménagers", emoji: "🧺" },
+    { id: "ac", label: "Climatisation", emoji: "❄️" },
+    { id: "entertainment", label: "TV / Divertissement", emoji: "📺" },
+    { id: "pool", label: "Piscine", emoji: "🏊" },
+    { id: "services", label: "Services disponibles", emoji: "🛎️" },
+    { id: "housekeeping", label: "Housekeeping", emoji: "🧹" },
+    { id: "recommendations", label: "Recommandations locales", emoji: "⭐" },
+    { id: "supermarkets", label: "Supermarchés", emoji: "🛒" },
+    { id: "beaches", label: "Plages", emoji: "🏖️" },
+    { id: "transport", label: "Transports", emoji: "🚗" },
+    { id: "contacts", label: "Contacts importants", emoji: "📇" },
+    { id: "emergency", label: "Informations d'urgence", emoji: "🚨" },
+    { id: "custom", label: "Questions personnalisées", emoji: "💬" }
+  ];
+  var CAT_BY_ID = {};
+  CATEGORIES.forEach(function (c) { CAT_BY_ID[c.id] = c; });
+
+  var DEFAULT_TEMPLATE = {
+    addLabel: "une information",
+    fields: [
+      { key: "title", label: "Titre", type: "text", placeholder: "ex. Machine à laver" },
+      { key: "content", label: "Détails", type: "textarea", placeholder: "Toutes les précisions utiles pour le guest" }
+    ],
+    title: function (v) { return v.title || ""; },
+    content: function (v) { return v.content || ""; }
+  };
+  var RECOMMENDATION_TYPES = ["Restaurant", "Bar / Rooftop", "Café", "Visite culturelle", "Activité / Excursion", "Bien-être", "Shopping", "Autre"];
+  var CATEGORY_TEMPLATES = {
+    recommendations: {
+      addLabel: "une recommandation",
+      fields: [
+        { key: "title", label: "Nom du lieu", type: "text", placeholder: "ex. La Brisa" },
+        { key: "type", label: "Type", type: "select", options: RECOMMENDATION_TYPES },
+        { key: "description", label: "Description", type: "textarea", placeholder: "Pourquoi le recommander, ambiance, spécialités, distance..." },
+        { key: "link", label: "Lien (Google Maps, TripAdvisor... — optionnel)", type: "text", placeholder: "https://maps.google.com/..." }
+      ],
+      title: function (v) { return (v.title || "Recommandation") + (v.type ? " · " + v.type : ""); },
+      content: function (v) {
+        var parts = [];
+        if (v.description) parts.push(v.description);
+        if (v.link) parts.push("Plus d'infos : " + v.link);
+        return parts.join(" ");
+      }
+    },
+    wifi: {
+      addLabel: "un réseau WiFi",
+      fields: [
+        { key: "ssid", label: "Nom du réseau (SSID)", type: "text", placeholder: "ex. Villa_WiFi" },
+        { key: "password", label: "Mot de passe", type: "text", placeholder: "ex. Sunset88" }
+      ],
+      title: function (v) { return "Réseau WiFi" + (v.ssid ? " — " + v.ssid : ""); },
+      content: function (v) {
+        var parts = [];
+        if (v.ssid) parts.push("Nom du réseau : " + v.ssid);
+        if (v.password) parts.push("Mot de passe : " + v.password);
+        return parts.join(". ");
+      }
+    },
+    checkinout: {
+      addLabel: "un horaire",
+      fields: [
+        { key: "checkIn", label: "Heure de check-in", type: "text", placeholder: "ex. 14:00" },
+        { key: "checkOut", label: "Heure de check-out", type: "text", placeholder: "ex. 11:00" },
+        { key: "lateCheckout", label: "Politique de late check-out (optionnel)", type: "textarea", placeholder: "ex. Possible selon disponibilité, supplément de 200 000 IDR. Laissez vide si non applicable." }
+      ],
+      title: function () { return "Check-in / Check-out"; },
+      content: function (v) {
+        var parts = [];
+        if (v.checkIn) parts.push("Check-in à " + v.checkIn);
+        if (v.checkOut) parts.push("Check-out à " + v.checkOut);
+        if (v.lateCheckout) parts.push("Late check-out : " + v.lateCheckout);
+        return parts.join(". ");
+      }
+    },
+    contacts: {
+      addLabel: "un contact",
+      fields: [
+        { key: "name", label: "Nom", type: "text", placeholder: "ex. Made" },
+        { key: "role", label: "Rôle (optionnel)", type: "text", placeholder: "ex. Manager, housekeeping..." },
+        { key: "phone", label: "Téléphone / WhatsApp", type: "text", placeholder: "ex. +62 812-3456-7890" },
+        { key: "notes", label: "Précisions (optionnel)", type: "textarea", placeholder: "Horaires de disponibilité, langue parlée..." }
+      ],
+      title: function (v) { return v.name || "Contact"; },
+      content: function (v) {
+        var parts = [];
+        if (v.role) parts.push(v.role);
+        if (v.phone) parts.push("joignable au " + v.phone);
+        if (v.notes) parts.push(v.notes);
+        return parts.join(" — ");
+      }
+    },
+    emergency: {
+      addLabel: "un contact d'urgence",
+      fields: [
+        { key: "name", label: "Service / contact", type: "text", placeholder: "ex. Clinique BIMC Kuta" },
+        { key: "phone", label: "Téléphone", type: "text", placeholder: "ex. +62 361 761263" },
+        { key: "notes", label: "Précisions (optionnel)", type: "textarea", placeholder: "Distance, horaires, quand appeler..." }
+      ],
+      title: function (v) { return v.name || "Urgence"; },
+      content: function (v) {
+        var parts = [];
+        if (v.phone) parts.push("Tél : " + v.phone);
+        if (v.notes) parts.push(v.notes);
+        return parts.join(". ");
+      }
+    },
+    custom: {
+      addLabel: "une question",
+      fields: [
+        { key: "question", label: "Question du guest", type: "text", placeholder: "ex. Peut-on amener un animal ?" },
+        { key: "answer", label: "Réponse", type: "textarea", placeholder: "Réponse à donner au guest" }
+      ],
+      title: function (v) { return v.question || ""; },
+      content: function (v) { return v.answer || ""; }
+    }
+  };
+  function templateForCategory(catId) { return CATEGORY_TEMPLATES[catId] || DEFAULT_TEMPLATE; }
+  function initialValuesFor(tmpl, initial) {
+    var v = {};
+    tmpl.fields.forEach(function (f) { v[f.key] = ""; });
+    if (initial && initial.fields) {
+      tmpl.fields.forEach(function (f) { if (initial.fields[f.key] != null) v[f.key] = initial.fields[f.key]; });
+    } else if (initial) {
+      if (tmpl.fields[0]) v[tmpl.fields[0].key] = initial.title || "";
+      var textField = null;
+      tmpl.fields.forEach(function (f) { if (f.type === "textarea") textField = f; });
+      if (!textField && tmpl.fields.length > 1) textField = tmpl.fields[1];
+      if (textField) v[textField.key] = initial.content || "";
+    }
+    return v;
+  }
+  function materializeFields(catId, fields) {
+    var tmpl = templateForCategory(catId);
+    var title = (tmpl.title(fields) || "").trim() || "(sans titre)";
+    var content = (tmpl.content(fields) || "").trim();
+    return { title: title, content: content, fields: fields };
+  }
+
+  // ---------------------------------------------------------------------
+  // Helpers
+  // ---------------------------------------------------------------------
+  function formatDate(iso) {
+    try { return new Date(iso).toLocaleDateString(undefined, { day: "numeric", month: "short", year: "numeric" }); }
+    catch (err) { return ""; }
+  }
+  function formatTime(iso) {
+    try { return new Date(iso).toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit" }); }
+    catch (err) { return ""; }
+  }
+  function buildGuestUrl(villaId) {
+    return location.origin + location.pathname + location.search + "#screen=guest&villa=" + encodeURIComponent(villaId);
+  }
+  function nowIso() { return new Date().toISOString(); }
+
+  function compressImage(file, maxW, quality) {
+    return new Promise(function (resolve, reject) {
+      var reader = new FileReader();
+      reader.onload = function () {
+        var img = new Image();
+        img.onload = function () {
+          var scale = Math.min(1, maxW / img.width);
+          var w = Math.max(1, Math.round(img.width * scale));
+          var h = Math.max(1, Math.round(img.height * scale));
+          var canvas = document.createElement("canvas");
+          canvas.width = w; canvas.height = h;
+          var ctx = canvas.getContext("2d");
+          ctx.drawImage(img, 0, 0, w, h);
+          try { resolve(canvas.toDataURL("image/jpeg", quality)); }
+          catch (err) { reject(err); }
+        };
+        img.onerror = reject;
+        img.src = reader.result;
+      };
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+    });
+  }
+
+  function getOrCreateSessionId(villaId) {
+    var key = "vc_session_" + villaId;
+    try {
+      var id = localStorage.getItem(key);
+      if (!id) {
+        id = (crypto.randomUUID ? crypto.randomUUID() : ("g-" + Date.now() + "-" + Math.random().toString(36).slice(2)));
+        localStorage.setItem(key, id);
+      }
+      return id;
+    } catch (err) {
+      return "g-" + Date.now() + "-" + Math.random().toString(36).slice(2);
+    }
+  }
+
+  function httpErrorMessage(err) {
+    if (err && err.status === 429) return "A lot of requests right now — please try again in a moment.";
+    if (err && err.status === 502) return "The concierge is unavailable right now. Please try again shortly.";
+    if (err && err.status === 401) return "Session expired — please sign in again.";
+    return "Something went wrong. Please try again.";
+  }
+
+  // ---------------------------------------------------------------------
+  // API client
+  // ---------------------------------------------------------------------
+  var AUTH_KEY = "vc_manager_token";
+  function getToken() { try { return localStorage.getItem(AUTH_KEY) || ""; } catch (err) { return ""; } }
+  function setToken(t) {
+    try { if (t) localStorage.setItem(AUTH_KEY, t); else localStorage.removeItem(AUTH_KEY); } catch (err) {}
+  }
+
+  function apiFetch(path, options) {
+    options = options || {};
+    var headers = { "content-type": "application/json" };
+    var token = getToken();
+    if (token) headers["authorization"] = "Bearer " + token;
+    return fetch("/api" + path, {
+      method: options.method || "GET",
+      headers: headers,
+      body: options.body !== undefined ? JSON.stringify(options.body) : undefined
+    }).then(function (res) {
+      return res.json().catch(function () { return {}; }).then(function (data) {
+        if (!res.ok) {
+          var e2 = new Error((data && data.error) || ("HTTP " + res.status));
+          e2.status = res.status;
+          throw e2;
+        }
+        return data;
+      });
+    });
+  }
+
+  var api = {
+    listVillas: function () { return apiFetch("/villas"); },
+    createVilla: function (data) { return apiFetch("/villas", { method: "POST", body: data }); },
+    getVilla: function (id) { return apiFetch("/villas/" + id); },
+    updateVilla: function (id, patch) { return apiFetch("/villas/" + id, { method: "PATCH", body: patch }); },
+    deleteVilla: function (id) { return apiFetch("/villas/" + id, { method: "DELETE" }); },
+    listKnowledge: function (villaId) { return apiFetch("/villas/" + villaId + "/knowledge"); },
+    addKnowledge: function (villaId, data) { return apiFetch("/villas/" + villaId + "/knowledge", { method: "POST", body: data }); },
+    updateKnowledge: function (villaId, itemId, patch) { return apiFetch("/villas/" + villaId + "/knowledge/" + itemId, { method: "PATCH", body: patch }); },
+    deleteKnowledge: function (villaId, itemId) { return apiFetch("/villas/" + villaId + "/knowledge/" + itemId, { method: "DELETE" }); },
+    listConversations: function (villaId) { return apiFetch("/villas/" + villaId + "/conversations"); },
+    setConversationHandled: function (villaId, convoId, handled) { return apiFetch("/villas/" + villaId + "/conversations/" + convoId, { method: "PATCH", body: { handled: handled } }); },
+    chat: function (villaId, sessionId, message) { return apiFetch("/villas/" + villaId + "/chat", { method: "POST", body: { sessionId: sessionId, message: message } }); },
+    getSession: function (villaId, sessionId) { return apiFetch("/villas/" + villaId + "/session/" + sessionId); },
+    authCheck: function () { return apiFetch("/auth/check", { method: "POST", body: {} }); }
+  };
+
+  function seedDemoVilla() {
+    function mk(catId, fields) { return Object.assign({ category: catId }, materializeFields(catId, fields)); }
+    return api.createVilla({ name: "Villa Kembali (démo)" }).then(function (villa) {
+      var items = [
+        mk("location", { title: "Adresse", content: "Jl. Pantai Berawa No. 88, Canggu, Bali 80361, Indonésie. À 5 minutes à pied de la plage de Berawa." }),
+        mk("checkinout", { checkIn: "14:00", checkOut: "11:00", lateCheckout: "" }),
+        mk("wifi", { ssid: "Kembali_Villa", password: "SunsetBali88" }),
+        mk("appliances", { title: "Machine à laver", content: "La machine à laver est dans la buanderie, à côté de la cuisine. Pour un lavage normal, sélectionnez le programme Coton 40 degrés et appuyez sur Start." }),
+        mk("appliances", { title: "Four", content: "Le four est à droite de la plaque de cuisson. Tournez le bouton de gauche sur la température souhaitée puis appuyez sur le bouton central pour démarrer." }),
+        mk("ac", { title: "Climatisation", content: "La télécommande est sur la table de chevet. Appuyez sur ON/OFF puis utilisez les flèches pour régler la température entre 20 et 26 degrés." }),
+        mk("rules", { title: "Coffre-fort", content: "Le coffre-fort se trouve dans le dressing de la chambre principale, en hauteur à gauche." }),
+        mk("pool", { title: "Piscine", content: "La piscine est ouverte de 7h à 22h. Merci de ne pas plonger, la profondeur maximale est de 1m40." }),
+        mk("recommendations", { title: "La Brisa", type: "Restaurant", description: "À 10 minutes à pied, pour un dîner en bord de plage au coucher du soleil.", link: "" }),
+        mk("recommendations", { title: "Tanah Lot", type: "Visite culturelle", description: "Temple emblématique posé sur un rocher, magnifique au coucher du soleil. À 25 minutes en voiture.", link: "" }),
+        mk("supermarkets", { title: "Supermarché le plus proche", content: "Pepito Market, à 400 mètres de la villa, ouvert de 7h à 23h tous les jours." }),
+        mk("transport", { title: "Location de scooter", content: "L'équipe peut organiser une location de scooter sur demande, comptez environ 70000 IDR par jour." }),
+        mk("contacts", { name: "Made", role: "Manager de la villa", phone: "+62 812-3456-7890 (WhatsApp)", notes: "Disponible de 8h à 20h." }),
+        mk("emergency", { name: "Clinique BIMC Kuta", phone: "+62 361 761263", notes: "À 20 minutes en voiture. En cas d'urgence vitale, appelez le 112." }),
+        mk("custom", { question: "Peut-on amener un animal de compagnie ?", answer: "Non, les animaux ne sont pas acceptés dans la villa." })
+      ];
+      var chain = Promise.resolve();
+      items.forEach(function (it, i) {
+        chain = chain.then(function () { return api.addKnowledge(villa.id, Object.assign({ order: i }, it)); });
+      });
+      return chain.then(function () { return villa.id; });
+    });
+  }
+
+  // ---------------------------------------------------------------------
+  // Data hooks — plain fetch + manual reload (no realtime backend here)
+  // ---------------------------------------------------------------------
+  function useVillas(authed) {
+    var s = useState(null); var villas = s[0], setVillas = s[1];
+    var reload = useCallback(function () {
+      if (!authed) return Promise.resolve();
+      return api.listVillas().then(function (data) { setVillas(data); }).catch(function () { setVillas([]); });
+    }, [authed]);
+    useEffect(function () { reload(); }, [reload]);
+    return [villas, reload];
+  }
+
+  function useVilla(villaId) {
+    var s = useState(undefined); var villa = s[0], setVilla = s[1];
+    var reload = useCallback(function () {
+      if (!villaId) return Promise.resolve();
+      return api.getVilla(villaId).then(function (data) { setVilla(data); }).catch(function (err) {
+        setVilla(err && err.status === 404 ? null : null);
+      });
+    }, [villaId]);
+    useEffect(function () { reload(); }, [reload]);
+    return [villa, reload];
+  }
+
+  function useKnowledge(authed, villaId) {
+    var s = useState(null); var items = s[0], setItems = s[1];
+    var reload = useCallback(function () {
+      if (!authed || !villaId) return Promise.resolve();
+      return api.listKnowledge(villaId).then(function (data) { setItems(data); }).catch(function () { setItems([]); });
+    }, [authed, villaId]);
+    useEffect(function () { reload(); }, [reload]);
+    return [items, reload];
+  }
+
+  function useConversations(authed, villaId) {
+    var s = useState(null); var convos = s[0], setConvos = s[1];
+    var reload = useCallback(function () {
+      if (!authed || !villaId) return Promise.resolve();
+      return api.listConversations(villaId).then(function (data) { setConvos(data); }).catch(function () { setConvos([]); });
+    }, [authed, villaId]);
+    useEffect(function () { reload(); }, [reload]);
+    return [convos, reload];
+  }
+
+  function useRoute() {
+    function parse() {
+      var raw = location.hash ? location.hash.replace(/^#/, "") : "";
+      var p = new URLSearchParams(raw);
+      return {
+        screen: p.get("screen") || "dashboard",
+        villa: p.get("villa") || null,
+        tab: p.get("tab") || "knowledge"
+      };
+    }
+    var state = useState(parse); var route = state[0], setRoute = state[1];
+    useEffect(function () {
+      function onChange() { setRoute(parse()); }
+      window.addEventListener("popstate", onChange);
+      window.addEventListener("hashchange", onChange);
+      return function () {
+        window.removeEventListener("popstate", onChange);
+        window.removeEventListener("hashchange", onChange);
+      };
+    }, []);
+    function navigate(next, opts) {
+      opts = opts || {};
+      var p = new URLSearchParams();
+      if (next.screen && next.screen !== "dashboard") p.set("screen", next.screen);
+      if (next.villa) p.set("villa", next.villa);
+      if (next.tab) p.set("tab", next.tab);
+      var qs = p.toString();
+      var url = location.pathname + location.search + (qs ? "#" + qs : "");
+      if (opts.replace) history.replaceState(null, "", url); else history.pushState(null, "", url);
+      setRoute(parse());
+    }
+    return [route, navigate];
+  }
+
+  // ---------------------------------------------------------------------
+  // Auth (single shared manager password)
+  // ---------------------------------------------------------------------
+  function useAuth() {
+    var s = useState(function () { return !!getToken(); }); var authed = s[0], setAuthed = s[1];
+    var s2 = useState(!!getToken()); var checking = s2[0], setChecking = s2[1];
+
+    useEffect(function () {
+      if (!getToken()) { setChecking(false); return; }
+      api.authCheck().then(function () { setAuthed(true); setChecking(false); }).catch(function () {
+        setToken(""); setAuthed(false); setChecking(false);
+      });
+    }, []);
+
+    function tryLogin(password) {
+      setToken(password);
+      return api.authCheck().then(function () { setAuthed(true); return true; }).catch(function () {
+        setToken(""); setAuthed(false); return false;
+      });
+    }
+    function logout() { setToken(""); setAuthed(false); }
+    return { authed: authed, checking: checking, tryLogin: tryLogin, logout: logout };
+  }
+
+  function LoginGate(props) {
+    var s1 = useState(""); var password = s1[0], setPassword = s1[1];
+    var s2 = useState(false); var busy = s2[0], setBusy = s2[1];
+    var s3 = useState(""); var error = s3[0], setError = s3[1];
+
+    function handleSubmit(ev) {
+      ev.preventDefault();
+      if (!password) return;
+      setBusy(true); setError("");
+      props.tryLogin(password).then(function (ok) {
+        setBusy(false);
+        if (!ok) setError("Mot de passe incorrect.");
+      });
+    }
+
+    return e("div", { className: "login-wrap" },
+      e("div", { className: "login-card" },
+        e("div", { className: "login-mark" }, "🛎️"),
+        e("h2", { style: { marginBottom: "4px" } }, "Villa Concierge"),
+        e("p", { className: "muted small", style: { marginBottom: "18px" } }, "Espace manager — mot de passe requis."),
+        e("form", { className: "stack", onSubmit: handleSubmit },
+          e("input", {
+            className: "input", type: "password", autoFocus: true, value: password,
+            placeholder: "Mot de passe", onChange: function (ev) { setPassword(ev.target.value); }
+          }),
+          error ? e("p", { className: "error-text" }, error) : null,
+          e("button", { type: "submit", className: "btn btn-primary", disabled: busy || !password }, busy ? "Vérification..." : "Entrer")
+        )
+      )
+    );
+  }
+
+  // ---------------------------------------------------------------------
+  // Small UI atoms
+  // ---------------------------------------------------------------------
+  function Button(props) {
+    var variant = props.variant || "primary";
+    var cls = "btn btn-" + variant + (props.small ? " btn-small" : "") + (props.className ? " " + props.className : "");
+    var rest = Object.assign({}, props);
+    delete rest.variant; delete rest.small; delete rest.className; delete rest.children;
+    return e("button", Object.assign({ className: cls }, rest), props.children);
+  }
+  function Field(props) {
+    return e("label", { className: "field" }, e("span", { className: "field-label" }, props.label), props.children);
+  }
+  function Tabs(props) {
+    return e("div", { className: "tabs" }, props.tabs.map(function (t) {
+      return e("button", {
+        key: t.id, className: "tab" + (props.active === t.id ? " active" : ""),
+        onClick: function () { props.onChange(t.id); }
+      }, t.label);
+    }));
+  }
+  function Modal(props) {
+    return e("div", { className: "modal-overlay", onClick: props.onClose },
+      e("div", { className: "modal", onClick: function (ev) { ev.stopPropagation(); } },
+        e("div", { className: "modal-head" }, e("h3", null, props.title), e("button", { className: "icon-btn", onClick: props.onClose }, "✕")),
+        e("div", { className: "modal-body" }, props.children)
+      )
+    );
+  }
+  function Spinner() { return e("div", { className: "spinner" }); }
+  function LoadingBlock() { return e("div", { className: "loading-block" }, e(Spinner)); }
+  function EmptyState(props) {
+    return e("div", { className: "empty-state" },
+      e("div", { className: "empty-icon" }, props.icon),
+      e("h3", null, props.title),
+      e("p", { className: "muted" }, props.body),
+      props.action || null
+    );
+  }
+  function ConfirmButton(props) {
+    var state = useState(false); var armed = state[0], setArmed = state[1];
+    useEffect(function () {
+      if (!armed) return;
+      var t = setTimeout(function () { setArmed(false); }, 3000);
+      return function () { clearTimeout(t); };
+    }, [armed]);
+    return e("button", {
+      className: (props.className || "icon-btn danger") + (armed ? " armed" : ""),
+      title: armed ? "Cliquez pour confirmer" : (props.title || "Supprimer"),
+      onClick: function (ev) {
+        ev.stopPropagation();
+        if (armed) { setArmed(false); props.onConfirm(); } else { setArmed(true); }
+      }
+    }, armed ? (props.confirmLabel || "Confirmer ?") : props.children);
+  }
+
+  // ---------------------------------------------------------------------
+  // Dashboard
+  // ---------------------------------------------------------------------
+  function VillaCard(props) {
+    var villa = props.villa, navigate = props.navigate, onPreview = props.onPreview, onDelete = props.onDelete;
+    var guestUrl = buildGuestUrl(villa.id);
+    var state = useState(false); var copied = state[0], setCopied = state[1];
+    function copyLink(ev) {
+      ev.stopPropagation();
+      try {
+        navigator.clipboard.writeText(guestUrl).then(function () {
+          setCopied(true); setTimeout(function () { setCopied(false); }, 1500);
+        });
+      } catch (err) {}
+    }
+    return e("div", { className: "villa-card", onClick: function () { navigate({ screen: "villa", villa: villa.id, tab: "knowledge" }); } },
+      e("div", { className: "villa-card-head" },
+        e("div", { className: "villa-emoji" }, "🏡"),
+        e(ConfirmButton, { onConfirm: function () { onDelete(villa.id); } }, "✕")
+      ),
+      e("h3", { className: "villa-card-title" }, villa.name),
+      e("p", { className: "villa-card-meta" }, "Créée le " + formatDate(villa.createdAt)),
+      e("div", { className: "row gap", onClick: function (ev) { ev.stopPropagation(); } },
+        e(Button, { variant: "ghost", small: true, onClick: copyLink }, copied ? "✓ Copié" : "🔗 Lien invité"),
+        e(Button, { variant: "ghost", small: true, onClick: function () { onPreview(villa.id); } }, "🔍 Tester")
+      )
+    );
+  }
+
+  function Dashboard(props) {
+    var navigate = props.navigate, onPreview = props.onPreview;
+    var vs = useVillas(true); var villas = vs[0], reloadVillas = vs[1];
+    var s1 = useState(false); var creating = s1[0], setCreating = s1[1];
+    var s2 = useState(""); var name = s2[0], setName = s2[1];
+    var s3 = useState(false); var busy = s3[0], setBusy = s3[1];
+
+    if (villas === null) return e(LoadingBlock);
+
+    function handleCreate(ev) {
+      ev.preventDefault();
+      if (!name.trim()) return;
+      setBusy(true);
+      api.createVilla({ name: name.trim() }).then(function (villa) {
+        setCreating(false); setName(""); setBusy(false);
+        navigate({ screen: "villa", villa: villa.id, tab: "knowledge" });
+      }).catch(function () { setBusy(false); });
+    }
+    function handleSeed() {
+      setBusy(true);
+      seedDemoVilla().then(function (id) {
+        setBusy(false);
+        navigate({ screen: "villa", villa: id, tab: "knowledge" });
+      }).catch(function () { setBusy(false); });
+    }
+    function handleDelete(id) {
+      api.deleteVilla(id).then(reloadVillas);
+    }
+
+    return e("div", { className: "page" },
+      e("div", { className: "page-head" },
+        e("div", null,
+          e("h1", { className: "page-title" }, "Vos villas"),
+          e("p", { className: "page-sub" }, "Gérez la base de connaissances et le concierge virtuel de chaque villa.")
+        ),
+        e(Button, { onClick: function () { setCreating(true); } }, "+ Nouvelle villa")
+      ),
+      villas.length === 0
+        ? e(EmptyState, {
+            icon: "🏡", title: "Aucune villa pour le moment",
+            body: "Créez votre première villa, ou explorez le produit avec une villa de démonstration déjà remplie.",
+            action: e("div", { className: "row gap" },
+              e(Button, { onClick: function () { setCreating(true); } }, "+ Nouvelle villa"),
+              e(Button, { variant: "ghost", onClick: handleSeed, disabled: busy }, busy ? "Création..." : "Charger une villa de démo")
+            )
+          })
+        : e("div", { className: "grid-cards" }, villas.map(function (v) {
+            return e(VillaCard, { key: v.id, villa: v, navigate: navigate, onPreview: onPreview, onDelete: handleDelete });
+          })),
+      creating && e(Modal, { title: "Nouvelle villa", onClose: function () { setCreating(false); } },
+        e("form", { className: "stack", onSubmit: handleCreate },
+          e(Field, { label: "Nom de la villa" },
+            e("input", { className: "input", autoFocus: true, value: name, onChange: function (ev) { setName(ev.target.value); }, placeholder: "ex. Villa Kembali" })
+          ),
+          e("div", { className: "row gap end" },
+            e(Button, { type: "button", variant: "ghost", onClick: function () { setCreating(false); } }, "Annuler"),
+            e(Button, { type: "submit", disabled: busy || !name.trim() }, busy ? "Création..." : "Créer")
+          )
+        )
+      )
+    );
+  }
+
+  // ---------------------------------------------------------------------
+  // Knowledge editor
+  // ---------------------------------------------------------------------
+  function TemplateField(props) {
+    var f = props.field;
+    if (f.type === "textarea") {
+      return e(Field, { label: f.label },
+        e("textarea", { className: "input textarea", rows: 3, value: props.value, placeholder: f.placeholder || "", onChange: function (ev) { props.onChange(ev.target.value); } })
+      );
+    }
+    if (f.type === "select") {
+      return e(Field, { label: f.label },
+        e("select", { className: "input", value: props.value, onChange: function (ev) { props.onChange(ev.target.value); } },
+          e("option", { value: "" }, "Sélectionner..."),
+          (f.options || []).map(function (o) { return e("option", { key: o, value: o }, o); })
+        )
+      );
+    }
+    return e(Field, { label: f.label },
+      e("input", { className: "input", autoFocus: props.autoFocus, value: props.value, placeholder: f.placeholder || "", onChange: function (ev) { props.onChange(ev.target.value); } })
+    );
+  }
+
+  function KnowledgeItemForm(props) {
+    var villaId = props.villaId, category = props.category, initial = props.initial;
+    var tmpl = templateForCategory(category);
+    var s1 = useState(function () { return initialValuesFor(tmpl, initial); }); var values = s1[0], setValues = s1[1];
+    var s3 = useState(initial && initial.photo ? initial.photo : null); var photo = s3[0], setPhoto = s3[1];
+    var s4 = useState(false); var busy = s4[0], setBusy = s4[1];
+    var s5 = useState(""); var error = s5[0], setError = s5[1];
+
+    function setField(key, val) {
+      setValues(function (prev) { var next = Object.assign({}, prev); next[key] = val; return next; });
+    }
+
+    function handleFile(ev) {
+      var file = ev.target.files && ev.target.files[0];
+      if (!file) return;
+      setError("");
+      compressImage(file, 480, 0.6).then(function (dataUrl) {
+        if (dataUrl.length > 180000) return compressImage(file, 320, 0.45);
+        return dataUrl;
+      }).then(function (dataUrl) {
+        if (dataUrl.length > 180000) { setError("Image trop lourde même compressée, essayez une photo plus simple."); return; }
+        setPhoto(dataUrl);
+      }).catch(function () { setError("Impossible de charger cette image."); });
+    }
+
+    function handleSave(ev) {
+      ev.preventDefault();
+      var trimmed = {};
+      tmpl.fields.forEach(function (f) { trimmed[f.key] = (values[f.key] || "").trim(); });
+      var anyFilled = tmpl.fields.some(function (f) { return trimmed[f.key]; });
+      if (!anyFilled) { setError("Merci de renseigner au moins un champ."); return; }
+      setBusy(true); setError("");
+      var payload = Object.assign(materializeFields(category, trimmed), { photo: photo || null, fields: trimmed });
+      var task = initial
+        ? api.updateKnowledge(villaId, initial.id, payload)
+        : api.addKnowledge(villaId, Object.assign({ category: category, order: Date.now() }, payload));
+      task.then(function () { setBusy(false); props.onDone(); }).catch(function () { setBusy(false); setError("Erreur lors de l'enregistrement."); });
+    }
+
+    return e("form", { className: "kb-form", onSubmit: handleSave },
+      tmpl.fields.map(function (f, idx) {
+        return e(TemplateField, { key: f.key, field: f, value: values[f.key] || "", autoFocus: idx === 0, onChange: function (val) { setField(f.key, val); } });
+      }),
+      e(Field, { label: "Photo (facultatif)" },
+        e("div", { className: "row gap" },
+          photo ? e("img", { className: "kb-photo-preview", src: photo }) : null,
+          e("input", { type: "file", accept: "image/*", onChange: handleFile }),
+          photo ? e("button", { type: "button", className: "link-danger", onClick: function () { setPhoto(null); } }, "Retirer") : null
+        )
+      ),
+      error ? e("p", { className: "error-text" }, error) : null,
+      e("div", { className: "row gap end" },
+        e(Button, { type: "button", variant: "ghost", onClick: props.onCancel }, "Annuler"),
+        e(Button, { type: "submit", disabled: busy }, busy ? "Enregistrement..." : "Enregistrer")
+      )
+    );
+  }
+
+  function KnowledgeItemRow(props) {
+    var s = useState(false); var editing = s[0], setEditing = s[1];
+    var item = props.item;
+    if (editing) {
+      return e(KnowledgeItemForm, {
+        villaId: props.villaId, category: item.category, initial: item,
+        onDone: function () { setEditing(false); props.onChanged(); }, onCancel: function () { setEditing(false); }
+      });
+    }
+    return e("div", { className: "kb-item" },
+      item.photo ? e("img", { className: "kb-item-photo", src: item.photo, alt: "" }) : null,
+      e("div", { className: "kb-item-body" },
+        e("div", { className: "kb-item-title" }, item.title),
+        e("div", { className: "kb-item-content" }, item.content)
+      ),
+      e("div", { className: "kb-item-actions" },
+        e("button", { className: "icon-btn", title: "Modifier", onClick: function () { setEditing(true); } }, "✎"),
+        e(ConfirmButton, { onConfirm: function () { api.deleteKnowledge(props.villaId, item.id).then(props.onChanged); } }, "✕")
+      )
+    );
+  }
+
+  function CategorySection(props) {
+    var cat = props.cat, items = props.items, open = props.open;
+    var tmpl = templateForCategory(cat.id);
+    return e("div", { className: "cat-section" + (open ? " open" : "") },
+      e("button", { className: "cat-header", onClick: props.onToggle },
+        e("span", { className: "cat-emoji" }, cat.emoji),
+        e("span", { className: "cat-label" }, cat.label),
+        e("span", { className: "cat-count" + (items.length === 0 ? " empty" : "") }, items.length),
+        e("span", { className: "cat-chevron" }, open ? "▾" : "▸")
+      ),
+      open ? e("div", { className: "cat-body" },
+        (items.length === 0 && !props.adding) ? e("p", { className: "muted small" }, "Aucune information pour cette catégorie.") : null,
+        items.map(function (it) {
+          return e(KnowledgeItemRow, { key: it.id, item: it, villaId: props.villaId, onChanged: props.onChanged });
+        }),
+        props.adding
+          ? e(KnowledgeItemForm, { villaId: props.villaId, category: cat.id, onDone: function () { props.onCancelAdd(); props.onChanged(); }, onCancel: props.onCancelAdd })
+          : e(Button, { variant: "ghost", small: true, onClick: props.onAdd }, "+ Ajouter " + (tmpl.addLabel || "une information"))
+      ) : null
+    );
+  }
+
+  function KnowledgeEditor(props) {
+    var villaId = props.villaId;
+    var kn = useKnowledge(true, villaId); var items = kn[0], reload = kn[1];
+    var s1 = useState(null); var openCat = s1[0], setOpenCat = s1[1];
+    var s2 = useState(null); var addingCat = s2[0], setAddingCat = s2[1];
+
+    if (items === null) return e(LoadingBlock);
+    var byCat = {};
+    CATEGORIES.forEach(function (c) { byCat[c.id] = items.filter(function (i) { return i.category === c.id; }); });
+    var filledCount = CATEGORIES.filter(function (c) { return byCat[c.id].length > 0; }).length;
+
+    return e("div", { className: "stack lg" },
+      e("div", { className: "kb-progress" },
+        e("span", null, filledCount + " / " + CATEGORIES.length + " catégories renseignées"),
+        e("div", { className: "progress-bar" }, e("div", { className: "progress-fill", style: { width: Math.round(filledCount / CATEGORIES.length * 100) + "%" } }))
+      ),
+      CATEGORIES.map(function (c) {
+        return e(CategorySection, {
+          key: c.id, cat: c, items: byCat[c.id],
+          open: openCat === c.id, onToggle: function () { setOpenCat(openCat === c.id ? null : c.id); },
+          adding: addingCat === c.id,
+          onAdd: function () { setAddingCat(c.id); setOpenCat(c.id); },
+          onCancelAdd: function () { setAddingCat(null); },
+          onChanged: reload,
+          villaId: villaId
+        });
+      })
+    );
+  }
+
+  // ---------------------------------------------------------------------
+  // QR panel
+  // ---------------------------------------------------------------------
+  function QrPanel(props) {
+    var villa = props.villa;
+    var url = buildGuestUrl(villa.id);
+    var s1 = useState(null); var dataUrl = s1[0], setDataUrl = s1[1];
+    var s2 = useState(false); var copied = s2[0], setCopied = s2[1];
+
+    useEffect(function () {
+      if (typeof window.qrcode !== "function") { setDataUrl(null); return; }
+      try {
+        var qr = window.qrcode(0, "M");
+        qr.addData(url);
+        qr.make();
+        setDataUrl(qr.createDataURL(8, 8));
+      } catch (err) { setDataUrl(null); }
+    }, [url]);
+
+    function copyLink() {
+      try {
+        navigator.clipboard.writeText(url).then(function () {
+          setCopied(true); setTimeout(function () { setCopied(false); }, 1500);
+        });
+      } catch (err) {}
+    }
+    function handleDownload() {
+      if (!dataUrl) return;
+      var a = document.createElement("a");
+      a.href = dataUrl;
+      a.download = (villa.slug || "villa") + "-qr-code.gif";
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+    }
+
+    return e("div", { className: "qr-panel" },
+      e("div", { className: "qr-card" },
+        dataUrl ? e("img", { className: "qr-image", src: dataUrl, alt: "QR code" }) : e("div", { className: "qr-fallback" }, "🛎️"),
+        e("p", { className: "qr-caption" }, "Need help? Chat with your virtual concierge.")
+      ),
+      e("div", { className: "stack" },
+        e(Field, { label: "Lien invité (à imprimer ou partager)" },
+          e("div", { className: "row gap" },
+            e("input", { className: "input", readOnly: true, value: url, onFocus: function (ev) { ev.target.select(); } }),
+            e(Button, { variant: "ghost", onClick: copyLink }, copied ? "✓ Copié" : "Copier")
+          )
+        ),
+        e("div", { className: "row gap" },
+          e(Button, { onClick: function () { props.onPreview(villa.id); } }, "🔍 Tester le chat"),
+          dataUrl ? e(Button, { variant: "ghost", onClick: handleDownload }, "⬇ Télécharger le QR code") : null
+        ),
+        e("p", { className: "muted small" }, "Le bouton \"Tester le chat\" ouvre un aperçu ici même. Pour un vrai guest, imprimez le QR code ou partagez le lien ci-dessus : il ouvre directement le chat, sans compte ni application.")
+      )
+    );
+  }
+
+  // ---------------------------------------------------------------------
+  // Conversations panel
+  // ---------------------------------------------------------------------
+  function StatTile(props) {
+    return e("div", { className: "stat-tile" + (props.tone ? " tone-" + props.tone : "") },
+      e("div", { className: "stat-value" }, props.value),
+      e("div", { className: "stat-label" }, props.label)
+    );
+  }
+
+  function ConversationRow(props) {
+    var convo = props.convo;
+    var messages = convo.messages || [];
+    var firstUser = null;
+    for (var i = 0; i < messages.length; i++) { if (messages[i].role === "user") { firstUser = messages[i]; break; } }
+    var needing = convo.needsHuman && !convo.handled;
+    return e("div", { className: "convo-row" },
+      e("button", { className: "convo-summary", onClick: props.onToggle },
+        e("span", { className: "convo-badge" + (needing ? " warn" : "") }, needing ? "A traiter" : (convo.needsHuman ? "Traitee" : "Resolue auto")),
+        e("span", { className: "convo-snippet" }, firstUser ? firstUser.content : "(conversation vide)"),
+        e("span", { className: "convo-time" }, formatDate(convo.updatedAt) + " " + formatTime(convo.updatedAt))
+      ),
+      props.open ? e("div", { className: "convo-thread" },
+        messages.map(function (m, idx) { return e("div", { key: idx, className: "msg-bubble " + m.role }, m.content); }),
+        convo.needsHuman ? e("div", { className: "row gap", style: { marginTop: "10px" } },
+          e(Button, {
+            small: true, variant: convo.handled ? "ghost" : "primary",
+            onClick: function () { api.setConversationHandled(props.villaId, convo.id, !convo.handled).then(props.onChanged); }
+          }, convo.handled ? "Marquer comme non traitee" : "✓ Marquer comme traitee")
+        ) : null
+      ) : null
+    );
+  }
+
+  function ConversationsPanel(props) {
+    var villaId = props.villaId;
+    var cs = useConversations(true, villaId); var convos = cs[0], reload = cs[1];
+    var s1 = useState(null); var openId = s1[0], setOpenId = s1[1];
+    var s2 = useState("all"); var filter = s2[0], setFilter = s2[1];
+
+    if (convos === null) return e(LoadingBlock);
+    if (convos.length === 0) return e(EmptyState, { icon: "💬", title: "Aucune conversation pour le moment", body: "Des qu'un guest posera une question via le QR code, elle apparaitra ici." });
+
+    var needing = convos.filter(function (c) { return c.needsHuman && !c.handled; });
+    var topicCounts = {}; var answeredCount = 0, totalQA = 0;
+    convos.forEach(function (c) {
+      (c.messages || []).forEach(function (m) {
+        if (m.role !== "assistant") return;
+        totalQA++;
+        if (m.answered) answeredCount++;
+        var t = m.topic || "other";
+        topicCounts[t] = (topicCounts[t] || 0) + 1;
+      });
+    });
+    var topicList = Object.keys(topicCounts).map(function (k) { return [k, topicCounts[k]]; }).sort(function (a, b) { return b[1] - a[1]; });
+    var maxTopic = topicList.length ? topicList[0][1] : 1;
+    var filtered = filter === "needing" ? needing : (filter === "handled" ? convos.filter(function (c) { return c.handled; }) : convos);
+
+    return e("div", { className: "stack lg" },
+      e("div", { className: "stats-row" },
+        e(StatTile, { label: "Conversations", value: convos.length }),
+        e(StatTile, { label: "Resolues automatiquement", value: totalQA ? Math.round(answeredCount / totalQA * 100) + "%" : "—" }),
+        e(StatTile, { label: "Nécessitent une intervention", value: needing.length, tone: needing.length ? "warn" : "good" })
+      ),
+      topicList.length > 0 ? e("div", { className: "card" },
+        e("h3", { className: "block-title" }, "Questions les plus fréquentes"),
+        e("div", { className: "topic-bars" }, topicList.slice(0, 8).map(function (pair) {
+          var t = pair[0], count = pair[1];
+          var label = (CAT_BY_ID[t] && CAT_BY_ID[t].label) || "Autre";
+          return e("div", { key: t, className: "topic-bar-row" },
+            e("span", { className: "topic-bar-label" }, label),
+            e("div", { className: "topic-bar-track" }, e("div", { className: "topic-bar-fill", style: { width: Math.round(count / maxTopic * 100) + "%" } })),
+            e("span", { className: "topic-bar-count" }, count)
+          );
+        }))
+      ) : null,
+      e("div", { className: "row gap" }, ["all", "needing", "handled"].map(function (f) {
+        var labelMap = { all: "Toutes", needing: "A traiter", handled: "Traitees" };
+        return e("button", { key: f, className: "chip" + (filter === f ? " active" : ""), onClick: function () { setFilter(f); } }, labelMap[f]);
+      })),
+      e("div", { className: "convo-list" }, filtered.map(function (c) {
+        return e(ConversationRow, {
+          key: c.id, convo: c, villaId: villaId,
+          open: openId === c.id, onToggle: function () { setOpenId(openId === c.id ? null : c.id); },
+          onChanged: reload
+        });
+      }))
+    );
+  }
+
+  // ---------------------------------------------------------------------
+  // Settings panel
+  // ---------------------------------------------------------------------
+  function SettingsPanel(props) {
+    var villa = props.villa, navigate = props.navigate, onChanged = props.onChanged;
+    var s1 = useState(villa.name); var name = s1[0], setName = s1[1];
+    var s2 = useState(false); var busy = s2[0], setBusy = s2[1];
+    var s3 = useState(""); var saved = s3[0], setSaved = s3[1];
+
+    function handleSave(ev) {
+      ev.preventDefault();
+      if (!name.trim()) return;
+      setBusy(true);
+      api.updateVilla(villa.id, { name: name.trim() }).then(function () {
+        setBusy(false); setSaved("Enregistré."); onChanged();
+        setTimeout(function () { setSaved(""); }, 1500);
+      }).catch(function () { setBusy(false); });
+    }
+
+    return e("div", { className: "stack lg" },
+      e("div", { className: "card" },
+        e("form", { className: "stack", onSubmit: handleSave },
+          e(Field, { label: "Nom de la villa" },
+            e("input", { className: "input", value: name, onChange: function (ev) { setName(ev.target.value); } })
+          ),
+          e("div", { className: "row gap" },
+            e(Button, { type: "submit", disabled: busy || !name.trim() }, busy ? "Enregistrement..." : "Enregistrer"),
+            saved ? e("span", { className: "muted small" }, saved) : null
+          )
+        )
+      ),
+      e("div", { className: "card" },
+        e("h3", { className: "block-title" }, "Zone dangereuse"),
+        e("p", { className: "muted small", style: { marginBottom: "10px" } }, "La suppression d'une villa efface son accès invité. Cette action est définitive."),
+        e(ConfirmButton, {
+          className: "btn btn-ghost", confirmLabel: "Confirmer la suppression",
+          onConfirm: function () { api.deleteVilla(villa.id).then(function () { navigate({ screen: "dashboard" }); }); }
+        }, "Supprimer cette villa")
+      )
+    );
+  }
+
+  // ---------------------------------------------------------------------
+  // Villa detail (manager)
+  // ---------------------------------------------------------------------
+  function VillaDetail(props) {
+    var villaId = props.villaId, tab = props.tab, navigate = props.navigate, onPreview = props.onPreview;
+    var vv = useVilla(villaId); var villa = vv[0], reloadVilla = vv[1];
+
+    if (villa === undefined) return e(LoadingBlock);
+    if (villa === null) return e(EmptyState, {
+      icon: "❓", title: "Villa introuvable", body: "Cette villa n'existe plus ou le lien est incorrect.",
+      action: e(Button, { onClick: function () { navigate({ screen: "dashboard" }); } }, "Retour aux villas")
+    });
+
+    var tabs = [
+      { id: "knowledge", label: "Base de connaissances" },
+      { id: "qr", label: "QR code & lien" },
+      { id: "conversations", label: "Conversations" },
+      { id: "settings", label: "Réglages" }
+    ];
+    var activeTab = tabs.some(function (t) { return t.id === tab; }) ? tab : "knowledge";
+
+    return e("div", { className: "page" },
+      e("button", { className: "link-back", onClick: function () { navigate({ screen: "dashboard" }); } }, "← Toutes les villas"),
+      e("div", { className: "page-head" },
+        e("div", null,
+          e("h1", { className: "page-title" }, villa.name),
+          e("p", { className: "page-sub" }, "Concierge virtuel — disponible 24h/24 pour vos guests.")
+        )
+      ),
+      e(Tabs, { tabs: tabs, active: activeTab, onChange: function (id) { navigate({ screen: "villa", villa: villaId, tab: id }, { replace: true }); } }),
+      e("div", { className: "tab-panel" },
+        activeTab === "knowledge" ? e(KnowledgeEditor, { villaId: villaId }) : null,
+        activeTab === "qr" ? e(QrPanel, { villa: villa, onPreview: onPreview }) : null,
+        activeTab === "conversations" ? e(ConversationsPanel, { villaId: villaId }) : null,
+        activeTab === "settings" ? e(SettingsPanel, { villa: villa, navigate: navigate, onChanged: reloadVilla }) : null
+      )
+    );
+  }
+
+  // ---------------------------------------------------------------------
+  // Guest app
+  // ---------------------------------------------------------------------
+  function GuestNotFound() {
+    return e("div", { className: "guest-app center-msg" }, e("p", null, "❓"), e("p", { className: "muted" }, "This villa link doesn't exist anymore."));
+  }
+
+  function GuestApp(props) {
+    var villaId = props.villaId;
+    var vv = useVilla(villaId); var villa = vv[0];
+    var sSession = useState(function () { return getOrCreateSessionId(villaId); }); var sessionId = sSession[0];
+    var sMsgs = useState([]); var messages = sMsgs[0], setMessages = sMsgs[1];
+    var sInput = useState(""); var input = sInput[0], setInput = sInput[1];
+    var sSending = useState(false); var sending = sSending[0], setSending = sSending[1];
+    var sError = useState(""); var error = sError[0], setError = sError[1];
+    var sLoadedHistory = useState(false); var loadedHistory = sLoadedHistory[0], setLoadedHistory = sLoadedHistory[1];
+    var scrollRef = useRef(null);
+
+    useEffect(function () {
+      if (!villaId) return;
+      api.getSession(villaId, sessionId).then(function (data) {
+        setMessages(data.messages || []);
+        setLoadedHistory(true);
+      }).catch(function () { setLoadedHistory(true); });
+    }, [villaId, sessionId]);
+
+    useEffect(function () {
+      if (scrollRef.current) scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+    }, [messages, sending]);
+
+    if (villa === undefined || !loadedHistory) return e("div", { className: "guest-app center-msg" }, e(Spinner));
+    if (villa === null) return e(GuestNotFound);
+
+    function send(text) {
+      var trimmed = (text || "").trim();
+      if (!trimmed || sending) return;
+      setError("");
+      var userMsg = { role: "user", content: trimmed, ts: nowIso() };
+      var optimistic = messages.concat([userMsg]);
+      setMessages(optimistic);
+      setInput("");
+      setSending(true);
+
+      api.chat(villaId, sessionId, trimmed).then(function (result) {
+        var assistantMsg = { role: "assistant", content: result.reply, ts: nowIso(), answered: result.answered, topic: result.topic };
+        setMessages(optimistic.concat([assistantMsg]));
+        setSending(false);
+      }).catch(function (httpErr) {
+        setSending(false);
+        setError(httpErrorMessage(httpErr));
+      });
+    }
+
+    var suggestions = ["WiFi password?", "What time is check-out?", "Nearby restaurants?"];
+
+    return e("div", { className: "guest-app" },
+      e("div", { className: "guest-header" },
+        e("div", { className: "guest-header-emoji" }, "🛎️"),
+        e("div", null,
+          e("div", { className: "guest-header-title" }, villa.name),
+          e("div", { className: "guest-header-sub" }, "Virtual concierge · available 24/7")
+        )
+      ),
+      e("div", { className: "guest-messages", ref: scrollRef },
+        messages.length === 0 ? e("div", { className: "guest-welcome" },
+          e("p", null, "Hi! Ask me anything about your stay — check-in, WiFi, the villa's equipment, or local recommendations.")
+        ) : null,
+        messages.map(function (m, idx) { return e("div", { key: idx, className: "msg-bubble " + m.role }, m.content); }),
+        sending ? e("div", { className: "row gap" },
+          e("div", { className: "msg-bubble assistant typing" }, e("span", { className: "dot" }), e("span", { className: "dot" }), e("span", { className: "dot" }))
+        ) : null
+      ),
+      messages.length === 0 ? e("div", { className: "guest-suggestions" }, suggestions.map(function (s) {
+        return e("button", { key: s, className: "chip", onClick: function () { send(s); } }, s);
+      })) : null,
+      error ? e("p", { className: "error-text center" }, error) : null,
+      e("form", { className: "guest-input-bar", onSubmit: function (ev) { ev.preventDefault(); send(input); } },
+        e("input", { className: "input", value: input, onChange: function (ev) { setInput(ev.target.value); }, placeholder: "Type your question…", disabled: sending }),
+        e("button", { className: "send-btn", type: "submit", disabled: sending || !input.trim() }, "➤")
+      )
+    );
+  }
+
+  // ---------------------------------------------------------------------
+  // Manager shell + root
+  // ---------------------------------------------------------------------
+  function ManagerShell(props) {
+    return e("div", null,
+      e("div", { className: "topbar" },
+        e("button", { className: "brand", onClick: function () { props.navigate({ screen: "dashboard" }); } },
+          e("span", { className: "brand-mark" }, "🛎️"), e("span", null, "Villa Concierge")
+        ),
+        e("div", { className: "row gap" },
+          e("span", { className: "topbar-tag" }, "Your virtual villa concierge, available 24/7"),
+          e("button", { className: "icon-btn", title: "Se déconnecter", onClick: props.onLogout }, "⎋")
+        )
+      ),
+      props.children
+    );
+  }
+
+  function GuestPreviewOverlay(props) {
+    return e("div", { className: "preview-overlay" },
+      e("div", { className: "preview-bar" },
+        e("span", null, "🔍 Aperçu du chat guest"),
+        e("button", { className: "btn btn-ghost btn-small", onClick: props.onExit }, "✕ Fermer l'aperçu")
+      ),
+      e("div", { className: "preview-body" }, e(GuestApp, { villaId: props.villaId }))
+    );
+  }
+
+  function App() {
+    var auth = useAuth();
+    var r = useRoute(); var route = r[0], navigate = r[1];
+    var sPrev = useState(null); var previewVilla = sPrev[0], setPreviewVilla = sPrev[1];
+
+    // Guest chat is public — no login required, regardless of auth state.
+    if (route.screen === "guest") {
+      return e(GuestApp, { villaId: route.villa });
+    }
+
+    if (auth.checking) return e(LoadingBlock);
+    if (!auth.authed) return e(LoginGate, { tryLogin: auth.tryLogin });
+
+    var main;
+    if (route.screen === "villa" && route.villa) {
+      main = e(ManagerShell, { navigate: navigate, onLogout: auth.logout },
+        e(VillaDetail, { villaId: route.villa, tab: route.tab, navigate: navigate, onPreview: setPreviewVilla })
+      );
+    } else {
+      main = e(ManagerShell, { navigate: navigate, onLogout: auth.logout }, e(Dashboard, { navigate: navigate, onPreview: setPreviewVilla }));
+    }
+
+    return e(React.Fragment, null,
+      main,
+      previewVilla ? e(GuestPreviewOverlay, { villaId: previewVilla, onExit: function () { setPreviewVilla(null); } }) : null
+    );
+  }
+
+  var root = ReactDOM.createRoot(document.getElementById("approot"));
+  root.render(e(App));
+})();
+</script>
+</body>
+</html>
