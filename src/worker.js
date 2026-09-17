@@ -7,7 +7,15 @@
 // Anthropic Messages API for the concierge replies.
 //
 // Routes:
-//   Manager (require Authorization: Bearer <MANAGER_PASSWORD>):
+//   Auth (no bearer token required):
+//     POST   /api/auth/signup                   { email, password } -> { token, manager }
+//     POST   /api/auth/login                    { email, password } -> { token, manager }
+//     POST   /api/auth/logout
+//
+//   Manager (require Authorization: Bearer <session token> from signup/login).
+//   Each manager only sees/manages their own villas; the very first account
+//   ever created is an admin and can see every manager's villas:
+//     GET    /api/auth/me                       -> { manager }
 //     GET    /api/villas
 //     POST   /api/villas                       { name }
 //     PATCH  /api/villas/:id                    { name }
@@ -20,7 +28,6 @@
 //     PATCH  /api/villas/:id/conversations/:cid { handled }
 //     POST   /api/villas/:id/conversations/:cid/reply { message } — owner
 //            replies in their own name, no AI call
-//     POST   /api/auth/check                    (any body) — 200 if the bearer token is valid
 //
 //   Public (no auth — this is what a guest's browser calls):
 //     GET    /api/villas/:id                    -> { id, name, slug, createdAt }
@@ -53,15 +60,141 @@ function slugify(s) {
   return stripped || "villa";
 }
 
-function isAuthed(request, env) {
-  if (!env.MANAGER_PASSWORD) return false;
+// ---------------------------------------------------------------------
+// Manager accounts — auth (PBKDF2 password hashing + opaque session
+// tokens stored in D1; replaces the old single shared MANAGER_PASSWORD).
+// ---------------------------------------------------------------------
+const SESSION_TTL_MS = 30 * 24 * 60 * 60 * 1000; // 30 days
+
+function bytesToHex(bytes) {
+  return Array.from(bytes).map(function (b) { return b.toString(16).padStart(2, "0"); }).join("");
+}
+function hexToBytes(hex) {
+  const bytes = new Uint8Array(hex.length / 2);
+  for (let i = 0; i < bytes.length; i++) bytes[i] = parseInt(hex.substr(i * 2, 2), 16);
+  return bytes;
+}
+function randomHex(numBytes) {
+  const arr = new Uint8Array(numBytes);
+  crypto.getRandomValues(arr);
+  return bytesToHex(arr);
+}
+async function hashPassword(password, saltHex) {
+  const enc = new TextEncoder();
+  const keyMaterial = await crypto.subtle.importKey("raw", enc.encode(password), { name: "PBKDF2" }, false, ["deriveBits"]);
+  const bits = await crypto.subtle.deriveBits(
+    { name: "PBKDF2", salt: hexToBytes(saltHex), iterations: 100000, hash: "SHA-256" },
+    keyMaterial,
+    256
+  );
+  return bytesToHex(new Uint8Array(bits));
+}
+function bearerToken(request) {
   const auth = request.headers.get("authorization") || "";
   const m = auth.match(/^Bearer\s+(.+)$/i);
-  return !!m && m[1] === env.MANAGER_PASSWORD;
+  return m ? m[1] : null;
 }
-function requireAuth(request, env) {
-  if (!isAuthed(request, env)) return err(401, "unauthorized");
-  return null;
+async function createSession(env, managerId) {
+  const token = randomHex(32);
+  const ts = nowIso();
+  const expiresAt = new Date(Date.now() + SESSION_TTL_MS).toISOString();
+  await env.DB.prepare("INSERT INTO sessions (token, manager_id, created_at, expires_at) VALUES (?, ?, ?, ?)")
+    .bind(token, managerId, ts, expiresAt)
+    .run();
+  return token;
+}
+async function getAuthedManager(request, env) {
+  const token = bearerToken(request);
+  if (!token) return null;
+  const row = await env.DB.prepare(
+    "SELECT managers.id as id, managers.email as email, managers.phone as phone, managers.notify_email as notify_email, managers.notify_whatsapp as notify_whatsapp, managers.is_admin as is_admin, sessions.expires_at as expires_at " +
+      "FROM sessions JOIN managers ON managers.id = sessions.manager_id WHERE sessions.token = ?"
+  )
+    .bind(token)
+    .first();
+  if (!row) return null;
+  if (new Date(row.expires_at).getTime() < Date.now()) return null;
+  return {
+    id: row.id,
+    email: row.email,
+    phone: row.phone || "",
+    notifyEmail: row.notify_email === null || row.notify_email === undefined ? true : !!row.notify_email,
+    notifyWhatsapp: row.notify_whatsapp === null || row.notify_whatsapp === undefined ? true : !!row.notify_whatsapp,
+    isAdmin: !!row.is_admin,
+  };
+}
+async function updateManagerProfile(env, managerId, body) {
+  const raw = String(body.phone || "").trim();
+  if (raw && !/^\+[1-9]\d{7,14}$/.test(raw)) {
+    return err(400, "phone must be in international format, e.g. +33612345678");
+  }
+  const notifyEmail = body.notifyEmail === undefined ? true : !!body.notifyEmail;
+  const notifyWhatsapp = body.notifyWhatsapp === undefined ? true : !!body.notifyWhatsapp;
+  await env.DB.prepare("UPDATE managers SET phone = ?, notify_email = ?, notify_whatsapp = ? WHERE id = ?")
+    .bind(raw || null, notifyEmail ? 1 : 0, notifyWhatsapp ? 1 : 0, managerId)
+    .run();
+  return json({ ok: true, phone: raw, notifyEmail: notifyEmail, notifyWhatsapp: notifyWhatsapp });
+}
+async function requireAuth(request, env) {
+  const manager = await getAuthedManager(request, env);
+  if (!manager) return { manager: null, errorResponse: err(401, "unauthorized") };
+  return { manager: manager, errorResponse: null };
+}
+async function loadVillaForManager(env, villaId, manager) {
+  const row = await env.DB.prepare("SELECT * FROM villas WHERE id = ?").bind(villaId).first();
+  if (!row) return { villa: null, errorResponse: err(404, "villa not found") };
+  if (!manager.isAdmin && row.manager_id !== manager.id) {
+    return { villa: null, errorResponse: err(403, "forbidden") };
+  }
+  return { villa: row, errorResponse: null };
+}
+async function signup(env, body) {
+  const email = String(body.email || "").trim().toLowerCase();
+  const password = String(body.password || "");
+  if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return err(400, "a valid email is required");
+  if (password.length < 8) return err(400, "password must be at least 8 characters");
+  const existing = await env.DB.prepare("SELECT id FROM managers WHERE email = ?").bind(email).first();
+  if (existing) return err(409, "an account with this email already exists");
+  // The very first manager to sign up becomes the admin (Maxime's global
+  // account); everyone after that is a regular, villa-scoped manager.
+  const countRow = await env.DB.prepare("SELECT COUNT(*) as n FROM managers").first();
+  const isAdmin = countRow && countRow.n === 0 ? 1 : 0;
+  const salt = randomHex(16);
+  const hash = await hashPassword(password, salt);
+  const id = newId("mgr");
+  const ts = nowIso();
+  await env.DB.prepare(
+    "INSERT INTO managers (id, email, password_hash, password_salt, is_admin, created_at) VALUES (?, ?, ?, ?, ?, ?)"
+  )
+    .bind(id, email, hash, salt, isAdmin, ts)
+    .run();
+  const token = await createSession(env, id);
+  return json({ token: token, manager: { id: id, email: email, phone: "", notifyEmail: true, notifyWhatsapp: true, isAdmin: !!isAdmin } }, 201);
+}
+async function login(env, body) {
+  const email = String(body.email || "").trim().toLowerCase();
+  const password = String(body.password || "");
+  const row = await env.DB.prepare("SELECT * FROM managers WHERE email = ?").bind(email).first();
+  if (!row) return err(401, "invalid email or password");
+  const hash = await hashPassword(password, row.password_salt);
+  if (hash !== row.password_hash) return err(401, "invalid email or password");
+  const token = await createSession(env, row.id);
+  return json({
+    token: token,
+    manager: {
+      id: row.id,
+      email: row.email,
+      phone: row.phone || "",
+      notifyEmail: row.notify_email === null || row.notify_email === undefined ? true : !!row.notify_email,
+      notifyWhatsapp: row.notify_whatsapp === null || row.notify_whatsapp === undefined ? true : !!row.notify_whatsapp,
+      isAdmin: !!row.is_admin,
+    },
+  });
+}
+async function logout(env, request) {
+  const token = bearerToken(request);
+  if (token) await env.DB.prepare("DELETE FROM sessions WHERE token = ?").bind(token).run();
+  return json({ ok: true });
 }
 
 async function readJson(request) {
@@ -99,7 +232,17 @@ const CATEGORY_LABELS = {
 };
 const CATEGORY_ORDER = Object.keys(CATEGORY_LABELS);
 
-function buildSystemPrompt(villa, items) {
+function localeLanguageName(locale) {
+  if (!locale) return "";
+  try {
+    const dn = new Intl.DisplayNames(["en"], { type: "language" });
+    return dn.of(locale) || "";
+  } catch (e) {
+    return "";
+  }
+}
+
+function buildSystemPrompt(villa, items, locale) {
   const byCat = {};
   for (const c of CATEGORY_ORDER) byCat[c] = [];
   for (const it of items) {
@@ -116,9 +259,16 @@ function buildSystemPrompt(villa, items) {
     "- Use only the information below about this villa. Never invent, assume or guess any detail about the villa, its equipment, its policies, or its surroundings."
   );
   lines.push(
-    "- If the guest asks something that is not covered below, say clearly and politely that you don't have that information, and offer to relay the question to the villa manager. Never guess to fill a gap."
+    "- If the guest asks something that is not covered below, say clearly and politely that you don't have that information. Their question is automatically forwarded to the villa manager the moment you say this, so state that as a fact that has already happened (e.g. \"I've passed your question on to the manager, who will get back to you\") — never phrase it as something you could do or are offering to do (never say \"I can pass this along\" or \"let me relay this\"). Never guess to fill a gap."
   );
-  lines.push("- Always reply in the same language the guest is writing in. If it's ambiguous, reply in English.");
+  const langName = localeLanguageName(locale);
+  lines.push(
+    langName
+      ? "- Always reply in the same language the guest is writing in. For the guest's very first message, if the language isn't clear from the text alone (e.g. a short greeting or a single word), default to " +
+          langName +
+          " — the guest's device language. The moment the guest actually writes in a different language, switch to match them for the rest of the conversation."
+      : "- Always reply in the same language the guest is writing in. If it's ambiguous, reply in English."
+  );
   lines.push(
     "- Sound like a warm, attentive on-site concierge: concise and natural, short answers over long paragraphs. Never mention that you are an AI, a bot, or a language model."
   );
@@ -209,25 +359,30 @@ async function askClaude(env, systemPrompt, turns) {
 // Route handlers
 // ---------------------------------------------------------------------
 
-async function listVillas(env) {
-  const { results } = await env.DB.prepare(
-    "SELECT id, name, slug, created_at, updated_at FROM villas ORDER BY created_at DESC"
-  ).all();
+async function listVillas(env, manager) {
+  const stmt = manager.isAdmin
+    ? env.DB.prepare(
+        "SELECT villas.*, managers.email as owner_email FROM villas LEFT JOIN managers ON managers.id = villas.manager_id ORDER BY villas.created_at DESC"
+      )
+    : env.DB.prepare("SELECT * FROM villas WHERE manager_id = ? ORDER BY created_at DESC").bind(manager.id);
+  const { results } = await stmt.all();
   return json(results.map(rowToVilla));
 }
 function rowToVilla(r) {
-  return { id: r.id, name: r.name, slug: r.slug, createdAt: r.created_at, updatedAt: r.updated_at };
+  const out = { id: r.id, name: r.name, slug: r.slug, createdAt: r.created_at, updatedAt: r.updated_at };
+  if (r.owner_email) out.ownerEmail = r.owner_email;
+  return out;
 }
 
-async function createVilla(env, body) {
+async function createVilla(env, manager, body) {
   const name = (body.name || "").trim();
   if (!name) return err(400, "name is required");
   const id = newId("villa");
   const ts = nowIso();
   await env.DB.prepare(
-    "INSERT INTO villas (id, name, slug, created_at, updated_at) VALUES (?, ?, ?, ?, ?)"
+    "INSERT INTO villas (id, name, slug, manager_id, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?)"
   )
-    .bind(id, name, slugify(name), ts, ts)
+    .bind(id, name, slugify(name), manager.id, ts, ts)
     .run();
   return json({ id, name, slug: slugify(name), createdAt: ts, updatedAt: ts }, 201);
 }
@@ -399,12 +554,136 @@ async function getSession(env, villaId, sessionId) {
   return json({ messages });
 }
 
-async function chat(env, villaId, body) {
+function escapeHtml(s) {
+  return String(s == null ? "" : s).replace(/[&<>"']/g, function (c) {
+    return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c];
+  });
+}
+
+// Best-effort email to the manager when the concierge can't answer a guest
+// on its own. Silently does nothing if RESEND_API_KEY isn't configured yet,
+// so it never breaks the guest's chat.
+async function sendManagerAlertEmail(env, toEmail, villaName, question, conversationUrl) {
+  if (!env.RESEND_API_KEY || !toEmail) return;
+  try {
+    await fetch("https://api.resend.com/emails", {
+      method: "POST",
+      headers: {
+        authorization: "Bearer " + env.RESEND_API_KEY,
+        "content-type": "application/json",
+      },
+      body: JSON.stringify({
+        from: env.RESEND_FROM || "Villa Concierge <onboarding@resend.dev>",
+        to: [toEmail],
+        subject: "Question d'un guest — " + villaName,
+        html:
+          "<p>Un guest de <strong>" + escapeHtml(villaName) + "</strong> a posé une question à laquelle le concierge virtuel n'a pas pu répondre seul :</p>" +
+          '<blockquote style="margin:12px 0;padding:10px 14px;background:#f4f4f5;border-left:3px solid #999;">' +
+          escapeHtml(question) +
+          "</blockquote>" +
+          '<p><a href="' + conversationUrl + '">Voir la conversation et répondre</a></p>',
+      }),
+    });
+  } catch (e) {
+    // Notification failures should never break the guest-facing chat.
+  }
+}
+
+// WhatsApp template variables can't contain newlines, can't start/end with
+// whitespace, and shouldn't run on forever — clean the guest's question up
+// before it goes into {{2}}.
+function sanitizeWhatsAppVariable(value, maxLen) {
+  var cleaned = String(value == null ? "" : value)
+    .replace(/[\r\n\t]+/g, " ")
+    .replace(/ {2,}/g, " ")
+    .trim();
+  if (maxLen && cleaned.length > maxLen) cleaned = cleaned.slice(0, maxLen - 1) + "…";
+  return cleaned;
+}
+
+async function sendManagerWhatsAppAlert(env, toPhone, villaName, question, convoId) {
+  if (
+    !env.TWILIO_ACCOUNT_SID ||
+    !env.TWILIO_AUTH_TOKEN ||
+    !env.TWILIO_WHATSAPP_FROM ||
+    !env.TWILIO_WHATSAPP_CONTENT_SID ||
+    !toPhone
+  ) {
+    console.log("WhatsApp alert skipped — missing config:", {
+      hasAccountSid: !!env.TWILIO_ACCOUNT_SID,
+      hasAuthToken: !!env.TWILIO_AUTH_TOKEN,
+      hasFromNumber: !!env.TWILIO_WHATSAPP_FROM,
+      hasContentSid: !!env.TWILIO_WHATSAPP_CONTENT_SID,
+      hasToPhone: !!toPhone,
+    });
+    return;
+  }
+  try {
+    const form = new URLSearchParams({
+      From: "whatsapp:" + env.TWILIO_WHATSAPP_FROM,
+      To: "whatsapp:" + toPhone,
+      ContentSid: env.TWILIO_WHATSAPP_CONTENT_SID,
+      // "3" is only the conversation id here — the WhatsApp button URL is
+      // "https://.../c/{{3}}" and the Worker's /c/:id route redirects to
+      // the real, longer app link. WhatsApp button variables can't contain
+      // a full URL of their own.
+      ContentVariables: JSON.stringify({
+        "1": sanitizeWhatsAppVariable(villaName, 80),
+        "2": sanitizeWhatsAppVariable(question, 300),
+        "3": sanitizeWhatsAppVariable(convoId, 100),
+      }),
+    });
+    const auth = btoa(env.TWILIO_ACCOUNT_SID + ":" + env.TWILIO_AUTH_TOKEN);
+    const res = await fetch("https://api.twilio.com/2010-04-01/Accounts/" + env.TWILIO_ACCOUNT_SID + "/Messages.json", {
+      method: "POST",
+      headers: {
+        authorization: "Basic " + auth,
+        "content-type": "application/x-www-form-urlencoded",
+      },
+      body: form.toString(),
+    });
+    if (!res.ok) {
+      const text = await res.text().catch(function () { return ""; });
+      console.error("WhatsApp alert rejected by Twilio:", res.status, text);
+    } else {
+      console.log("WhatsApp alert sent to", toPhone);
+    }
+  } catch (e) {
+    console.error("WhatsApp alert threw:", e && e.message);
+  }
+}
+
+async function notifyManagerUnanswered(env, villa, question, convoId, baseUrl) {
+  try {
+    let contact = null;
+    if (villa.manager_id) {
+      contact = await env.DB.prepare("SELECT email, phone, notify_email, notify_whatsapp FROM managers WHERE id = ?").bind(villa.manager_id).first();
+    }
+    if (!contact) {
+      // Villas created before manager accounts existed have no manager_id —
+      // fall back to notifying the admin account instead of no one.
+      contact = await env.DB.prepare("SELECT email, phone, notify_email, notify_whatsapp FROM managers WHERE is_admin = 1 ORDER BY created_at ASC LIMIT 1").first();
+    }
+    if (!contact || !baseUrl) return;
+    const conversationUrl = baseUrl + "/#screen=villa&villa=" + villa.id + "&tab=conversations&convo=" + convoId;
+    const wantsEmail = contact.notify_email === null || contact.notify_email === undefined ? true : !!contact.notify_email;
+    const wantsWhatsapp = contact.notify_whatsapp === null || contact.notify_whatsapp === undefined ? true : !!contact.notify_whatsapp;
+    await Promise.all([
+      contact.email && wantsEmail ? sendManagerAlertEmail(env, contact.email, villa.name, question, conversationUrl) : Promise.resolve(),
+      contact.phone && wantsWhatsapp ? sendManagerWhatsAppAlert(env, contact.phone, villa.name, question, convoId) : Promise.resolve(),
+    ]);
+  } catch (e) {
+    // Best-effort — never let this break the guest's chat.
+  }
+}
+
+async function chat(env, villaId, body, baseUrl) {
   const sessionId = String(body.sessionId || "").slice(0, 200);
   const message = String(body.message || "").trim().slice(0, 4000);
+  const locale = String(body.locale || "").slice(0, 35);
   if (!sessionId || !message) return err(400, "sessionId and message are required");
 
-  const villa = await env.DB.prepare("SELECT id, name FROM villas WHERE id = ?").bind(villaId).first();
+  const villa = await env.DB.prepare("SELECT id, name, manager_id FROM villas WHERE id = ?").bind(villaId).first();
   if (!villa) return err(404, "villa not found");
 
   const { results: items } = await env.DB.prepare(
@@ -419,6 +698,7 @@ async function chat(env, villaId, body) {
     .bind(villaId, sessionId)
     .first();
   let messages = convoRow ? JSON.parse(convoRow.messages_json || "[]") : [];
+  const convoId = convoRow ? convoRow.id : newId("convo");
 
   const userMsg = { role: "user", content: message, ts: nowIso() };
   const historyForPrompt = messages.slice(-16);
@@ -426,7 +706,7 @@ async function chat(env, villaId, body) {
     .concat([userMsg])
     .map((m) => ({ role: m.role, content: m.content }));
 
-  const systemPrompt = buildSystemPrompt(villa, items);
+  const systemPrompt = buildSystemPrompt(villa, items, locale);
 
   let reply, answered, topic;
   try {
@@ -453,14 +733,20 @@ async function chat(env, villaId, body) {
     await env.DB.prepare(
       "UPDATE conversations SET messages_json = ?, updated_at = ?, needs_human = ? WHERE id = ?"
     )
-      .bind(JSON.stringify(newMessages), ts, answered ? 0 : 1, convoRow.id)
+      .bind(JSON.stringify(newMessages), ts, answered ? 0 : 1, convoId)
       .run();
   } else {
     await env.DB.prepare(
       "INSERT INTO conversations (id, villa_id, session_id, started_at, updated_at, messages_json, needs_human, handled) VALUES (?,?,?,?,?,?,?,0)"
     )
-      .bind(newId("convo"), villaId, sessionId, ts, ts, JSON.stringify(newMessages), answered ? 0 : 1)
+      .bind(convoId, villaId, sessionId, ts, ts, JSON.stringify(newMessages), answered ? 0 : 1)
       .run();
+  }
+
+  // Let the manager know by email the moment the concierge can't answer on
+  // its own, with the guest's question and a direct link to the conversation.
+  if (!answered) {
+    await notifyManagerUnanswered(env, villa, message, convoId, baseUrl);
   }
 
   return json({ reply, answered, topic });
@@ -475,6 +761,21 @@ export default {
     const url = new URL(request.url);
     const path = url.pathname;
 
+    // Short link sent in WhatsApp manager alerts. A WhatsApp button URL
+    // can only carry one dynamic value, appended at the very end of a
+    // fixed base URL, so the template links here with just the
+    // conversation id and this route resolves it to the real app screen.
+    if (path.indexOf("/c/") === 0) {
+      const shortConvoId = path.slice(3);
+      const convoRow = shortConvoId
+        ? await env.DB.prepare("SELECT villa_id FROM conversations WHERE id = ?").bind(shortConvoId).first()
+        : null;
+      const dest = convoRow
+        ? url.origin + "/#screen=villa&villa=" + convoRow.villa_id + "&tab=conversations&convo=" + shortConvoId
+        : url.origin;
+      return Response.redirect(dest, 302);
+    }
+
     if (!path.startsWith("/api/")) {
       return env.ASSETS.fetch(request);
     }
@@ -482,10 +783,26 @@ export default {
     try {
       const parts = path.split("/").filter(Boolean); // ["api", "villas", ":id", ...]
 
-      // /api/auth/check
-      if (parts[1] === "auth" && parts[2] === "check") {
-        const authErr = requireAuth(request, env);
-        return authErr || json({ ok: true });
+      // /api/auth/signup   { email, password }
+      if (parts[1] === "auth" && parts[2] === "signup" && request.method === "POST") {
+        return await signup(env, await readJson(request));
+      }
+      // /api/auth/login    { email, password }
+      if (parts[1] === "auth" && parts[2] === "login" && request.method === "POST") {
+        return await login(env, await readJson(request));
+      }
+      // /api/auth/logout
+      if (parts[1] === "auth" && parts[2] === "logout" && request.method === "POST") {
+        return await logout(env, request);
+      }
+      // /api/auth/me  -> current manager, or 401
+      //   PATCH { phone } -> update the current manager's WhatsApp number
+      if (parts[1] === "auth" && parts[2] === "me") {
+        const auth = await requireAuth(request, env);
+        if (auth.errorResponse) return auth.errorResponse;
+        if (request.method === "GET") return json({ manager: auth.manager });
+        if (request.method === "PATCH") return await updateManagerProfile(env, auth.manager.id, await readJson(request));
+        return err(405, "method not allowed");
       }
 
       if (parts[1] === "villas") {
@@ -494,12 +811,12 @@ export default {
         // /api/villas
         if (!villaId) {
           if (request.method === "GET") {
-            const authErr = requireAuth(request, env);
-            return authErr || (await listVillas(env));
+            const auth = await requireAuth(request, env);
+            return auth.errorResponse || (await listVillas(env, auth.manager));
           }
           if (request.method === "POST") {
-            const authErr = requireAuth(request, env);
-            return authErr || (await createVilla(env, await readJson(request)));
+            const auth = await requireAuth(request, env);
+            return auth.errorResponse || (await createVilla(env, auth.manager, await readJson(request)));
           }
           return err(405, "method not allowed");
         }
@@ -510,19 +827,25 @@ export default {
         if (!sub) {
           if (request.method === "GET") return await getVillaPublic(env, villaId);
           if (request.method === "PATCH") {
-            const authErr = requireAuth(request, env);
-            return authErr || (await updateVilla(env, villaId, await readJson(request)));
+            const auth = await requireAuth(request, env);
+            if (auth.errorResponse) return auth.errorResponse;
+            const owns = await loadVillaForManager(env, villaId, auth.manager);
+            if (owns.errorResponse) return owns.errorResponse;
+            return await updateVilla(env, villaId, await readJson(request));
           }
           if (request.method === "DELETE") {
-            const authErr = requireAuth(request, env);
-            return authErr || (await deleteVilla(env, villaId));
+            const auth = await requireAuth(request, env);
+            if (auth.errorResponse) return auth.errorResponse;
+            const owns = await loadVillaForManager(env, villaId, auth.manager);
+            if (owns.errorResponse) return owns.errorResponse;
+            return await deleteVilla(env, villaId);
           }
           return err(405, "method not allowed");
         }
 
         // /api/villas/:id/chat  (public)
         if (sub === "chat" && request.method === "POST") {
-          return await chat(env, villaId, await readJson(request));
+          return await chat(env, villaId, await readJson(request), url.origin);
         }
 
         // /api/villas/:id/session/:sessionId  (public, read-only — lets a
@@ -531,10 +854,12 @@ export default {
           return await getSession(env, villaId, parts[4]);
         }
 
-        // /api/villas/:id/knowledge[...]  (manager only)
+        // /api/villas/:id/knowledge[...]  (manager only, own villas)
         if (sub === "knowledge") {
-          const authErr = requireAuth(request, env);
-          if (authErr) return authErr;
+          const auth = await requireAuth(request, env);
+          if (auth.errorResponse) return auth.errorResponse;
+          const owns = await loadVillaForManager(env, villaId, auth.manager);
+          if (owns.errorResponse) return owns.errorResponse;
           const itemId = parts[4];
           if (!itemId) {
             if (request.method === "GET") return await listKnowledge(env, villaId);
@@ -546,10 +871,12 @@ export default {
           return err(405, "method not allowed");
         }
 
-        // /api/villas/:id/conversations[...]  (manager only)
+        // /api/villas/:id/conversations[...]  (manager only, own villas)
         if (sub === "conversations") {
-          const authErr = requireAuth(request, env);
-          if (authErr) return authErr;
+          const auth = await requireAuth(request, env);
+          if (auth.errorResponse) return auth.errorResponse;
+          const owns = await loadVillaForManager(env, villaId, auth.manager);
+          if (owns.errorResponse) return owns.errorResponse;
           const convoId = parts[4];
           if (!convoId) {
             if (request.method === "GET") return await listConversations(env, villaId);
