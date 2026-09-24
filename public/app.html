@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="fr">
+<html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -16,6 +16,7 @@
     --good:#1F6F5C; --good-soft:#E4EFE9;
     --danger:#A33B32; --danger-soft:#F5E1DE;
     --shadow: 0 1px 2px rgba(27,33,28,0.06), 0 6px 20px -8px rgba(27,33,28,0.12);
+    --shadow-lg: 0 4px 10px rgba(27,33,28,0.10), 0 18px 40px -14px rgba(27,33,28,0.22);
     --radius: 14px;
     color-scheme: light;
   }
@@ -29,6 +30,7 @@
       --good:#49B695; --good-soft:#1E3830;
       --danger:#E4776C; --danger-soft:#3B2320;
       --shadow: 0 1px 2px rgba(0,0,0,0.3), 0 8px 24px -8px rgba(0,0,0,0.5);
+      --shadow-lg: 0 6px 16px rgba(0,0,0,0.4), 0 24px 48px -16px rgba(0,0,0,0.65);
       color-scheme: dark;
     }
   }
@@ -41,6 +43,7 @@
     --good:#49B695; --good-soft:#1E3830;
     --danger:#E4776C; --danger-soft:#3B2320;
     --shadow: 0 1px 2px rgba(0,0,0,0.3), 0 8px 24px -8px rgba(0,0,0,0.5);
+    --shadow-lg: 0 6px 16px rgba(0,0,0,0.4), 0 24px 48px -16px rgba(0,0,0,0.65);
     color-scheme: dark;
   }
   *{box-sizing:border-box;}
@@ -61,7 +64,7 @@
   .row.end{ justify-content:flex-end; }
 
   /* top bar */
-  .topbar{ display:flex; align-items:center; justify-content:space-between; padding:16px 28px; border-bottom:1px solid var(--border); background:var(--surface); }
+  .topbar{ position:sticky; top:0; z-index:20; display:flex; align-items:center; justify-content:space-between; padding:14px 28px; border-bottom:1px solid var(--border); background:color-mix(in srgb, var(--surface) 88%, transparent); backdrop-filter:blur(10px); }
   .brand{ display:flex; align-items:center; gap:10px; font-family:'Fraunces',serif; font-weight:600; font-size:18px; cursor:pointer; background:none; border:none; color:var(--ink); }
   .brand-mark{ width:30px; height:30px; border-radius:9px; background:var(--accent); color:var(--accent-contrast); display:flex; align-items:center; justify-content:center; font-size:16px; }
   .topbar-tag{ color:var(--ink-faint); font-size:12.5px; }
@@ -78,7 +81,7 @@
   .btn{ border-radius:10px; padding:10px 16px; font-weight:600; font-size:13.5px; border:1px solid transparent; cursor:pointer; display:inline-flex; align-items:center; gap:6px; white-space:nowrap; transition:opacity .15s, transform .05s; text-decoration:none; }
   .btn:active{ transform:translateY(1px); }
   .btn:disabled{ opacity:.55; cursor:not-allowed; }
-  .btn-primary{ background:var(--accent); color:var(--accent-contrast); }
+  .btn-primary{ background:var(--accent); color:var(--accent-contrast); box-shadow:0 1px 2px rgba(0,0,0,0.08), 0 6px 16px -6px color-mix(in srgb, var(--accent) 55%, transparent); }
   .btn-primary:hover:not(:disabled){ opacity:.92; }
   .btn-ghost{ background:var(--surface-2); color:var(--ink); border-color:var(--border); }
   .switch-row{ display:flex; align-items:center; justify-content:space-between; gap:12px; padding:8px 0; }
@@ -95,12 +98,15 @@
   .icon-btn:hover{ background:var(--surface-2); color:var(--ink); }
   .icon-btn.danger{ color:var(--ink-faint); }
   .icon-btn.danger:hover, .icon-btn.danger.armed{ color:var(--danger); background:var(--danger-soft); }
+  .topbar-icon-btn{ width:42px; height:42px; display:flex; align-items:center; justify-content:center; background:var(--surface-2); border:1px solid var(--border); border-radius:12px; color:var(--ink-dim); cursor:pointer; transition:box-shadow .15s ease, border-color .15s ease, color .15s ease, background .15s ease, transform .05s ease; }
+  .topbar-icon-btn:hover{ background:var(--surface); border-color:color-mix(in srgb, var(--accent) 35%, var(--border)); color:var(--ink); box-shadow:var(--shadow); }
+  .topbar-icon-btn:active{ transform:translateY(1px); }
 
   /* cards & grid */
   .card{ background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); padding:18px 20px; box-shadow:var(--shadow); }
   .grid-cards{ display:grid; grid-template-columns:repeat(auto-fill, minmax(230px,1fr)); gap:16px; }
-  .villa-card{ background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); padding:18px; box-shadow:var(--shadow); cursor:pointer; display:flex; flex-direction:column; gap:8px; }
-  .villa-card:hover{ border-color:var(--accent); }
+  .villa-card{ background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); padding:18px; box-shadow:var(--shadow); cursor:pointer; display:flex; flex-direction:column; gap:8px; transition:box-shadow .15s ease, border-color .15s ease, transform .1s ease; }
+  .villa-card:hover{ border-color:var(--accent); box-shadow:var(--shadow-lg); transform:translateY(-2px); }
   .villa-card-head{ display:flex; align-items:center; justify-content:space-between; }
   .villa-emoji{ color:var(--accent); display:flex; }
   .villa-card-title{ font-size:17px; }
@@ -134,8 +140,9 @@
   .kb-progress{ display:flex; flex-direction:column; gap:6px; font-size:12.5px; color:var(--ink-dim); }
   .progress-bar{ height:6px; background:var(--surface-2); border-radius:4px; overflow:hidden; }
   .progress-fill{ height:100%; background:var(--accent); border-radius:4px; }
-  .cat-section{ border:1px solid var(--border); border-radius:12px; background:var(--surface); overflow:hidden; }
-  .cat-header{ width:100%; display:flex; align-items:center; gap:10px; padding:13px 16px; background:none; border:none; cursor:pointer; text-align:left; }
+  .cat-section{ border:1px solid var(--border); border-radius:12px; background:var(--surface); box-shadow:var(--shadow); overflow:hidden; }
+  .cat-header{ width:100%; display:flex; align-items:center; gap:10px; padding:13px 16px; background:none; border:none; cursor:pointer; text-align:left; transition:background .15s ease; }
+  .cat-header:hover{ background:var(--surface-2); }
   .cat-emoji{ font-size:17px; }
   .cat-label{ font-weight:600; flex:1; font-size:14px; }
   .cat-count{ background:var(--surface-2); color:var(--ink-dim); font-size:11.5px; font-weight:700; padding:2px 8px; border-radius:20px; }
@@ -179,8 +186,9 @@
   .chip{ border:1px solid var(--border); background:var(--surface); border-radius:20px; padding:6px 13px; font-size:12.5px; font-weight:600; color:var(--ink-dim); cursor:pointer; }
   .chip.active{ background:var(--accent-soft); border-color:var(--accent); color:var(--accent-ink); }
   .convo-list{ display:flex; flex-direction:column; gap:8px; }
-  .convo-row{ border:1px solid var(--border); border-radius:12px; background:var(--surface); overflow:hidden; }
-  .convo-summary{ width:100%; display:grid; grid-template-columns:auto 1fr auto; gap:12px; align-items:center; padding:12px 14px; background:none; border:none; cursor:pointer; text-align:left; }
+  .convo-row{ border:1px solid var(--border); border-radius:12px; background:var(--surface); box-shadow:var(--shadow); overflow:hidden; }
+  .convo-summary{ width:100%; display:grid; grid-template-columns:auto 1fr auto; gap:12px; align-items:center; padding:12px 14px; background:none; border:none; cursor:pointer; text-align:left; transition:background .15s ease; }
+  .convo-summary:hover{ background:var(--surface-2); }
   .convo-badge{ font-size:11px; font-weight:700; padding:3px 9px; border-radius:20px; background:var(--good-soft); color:var(--good); white-space:nowrap; }
   .convo-badge.warn{ background:var(--warn-soft); color:var(--warn); }
   .convo-snippet{ font-size:13px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; color:var(--ink); }
@@ -242,124 +250,124 @@
   // Categories (unchanged from the original design)
   // ---------------------------------------------------------------------
   var CATEGORIES = [
-    { id: "general", label: "Informations générales", emoji: "🏡" },
-    { id: "location", label: "Adresse et localisation", emoji: "📍" },
+    { id: "general", label: "General information", emoji: "🏡" },
+    { id: "location", label: "Address & location", emoji: "📍" },
     { id: "checkinout", label: "Check-in / Check-out", emoji: "🔑" },
     { id: "wifi", label: "WiFi", emoji: "📶" },
-    { id: "rules", label: "Règles de la villa", emoji: "📋" },
-    { id: "pets", label: "Animaux de compagnie", emoji: "🐾" },
-    { id: "equipment", label: "Équipements", emoji: "🛠️" },
-    { id: "appliances", label: "Appareils électroménagers", emoji: "🧺" },
-    { id: "ac", label: "Climatisation", emoji: "❄️" },
-    { id: "entertainment", label: "TV / Divertissement", emoji: "📺" },
-    { id: "pool", label: "Piscine", emoji: "🏊" },
-    { id: "services", label: "Services disponibles", emoji: "🛎️" },
+    { id: "rules", label: "Villa rules", emoji: "📋" },
+    { id: "pets", label: "Pets", emoji: "🐾" },
+    { id: "equipment", label: "Equipment", emoji: "🛠️" },
+    { id: "appliances", label: "Appliances", emoji: "🧺" },
+    { id: "ac", label: "Air conditioning", emoji: "❄️" },
+    { id: "entertainment", label: "TV / Entertainment", emoji: "📺" },
+    { id: "pool", label: "Pool", emoji: "🏊" },
+    { id: "services", label: "Available services", emoji: "🛎️" },
     { id: "housekeeping", label: "Housekeeping", emoji: "🧹" },
-    { id: "recommendations", label: "Recommandations locales", emoji: "⭐" },
-    { id: "supermarkets", label: "Supermarchés", emoji: "🛒" },
-    { id: "beaches", label: "Plages", emoji: "🏖️" },
-    { id: "transport", label: "Transports", emoji: "🚗" },
-    { id: "contacts", label: "Contacts importants", emoji: "📇" },
-    { id: "emergency", label: "Informations d'urgence", emoji: "🚨" },
-    { id: "custom", label: "Questions personnalisées", emoji: "💬" }
+    { id: "recommendations", label: "Local recommendations", emoji: "⭐" },
+    { id: "supermarkets", label: "Supermarkets", emoji: "🛒" },
+    { id: "beaches", label: "Beaches", emoji: "🏖️" },
+    { id: "transport", label: "Transport", emoji: "🚗" },
+    { id: "contacts", label: "Important contacts", emoji: "📇" },
+    { id: "emergency", label: "Emergency information", emoji: "🚨" },
+    { id: "custom", label: "Custom questions", emoji: "💬" }
   ];
   var CAT_BY_ID = {};
   CATEGORIES.forEach(function (c) { CAT_BY_ID[c.id] = c; });
 
   var DEFAULT_TEMPLATE = {
-    addLabel: "une information",
+    addLabel: "an item",
     fields: [
-      { key: "title", label: "Titre", type: "text", placeholder: "ex. Machine à laver" },
-      { key: "content", label: "Détails", type: "textarea", placeholder: "Toutes les précisions utiles pour le guest" }
+      { key: "title", label: "Title", type: "text", placeholder: "e.g. Washing machine" },
+      { key: "content", label: "Details", type: "textarea", placeholder: "Any details that would be useful for the guest" }
     ],
     title: function (v) { return v.title || ""; },
     content: function (v) { return v.content || ""; }
   };
-  var RECOMMENDATION_TYPES = ["Restaurant", "Bar / Rooftop", "Café", "Visite culturelle", "Activité / Excursion", "Bien-être", "Shopping", "Autre"];
+  var RECOMMENDATION_TYPES = ["Restaurant", "Bar / Rooftop", "Café", "Cultural visit", "Activity / Excursion", "Wellness", "Shopping", "Other"];
   var CATEGORY_TEMPLATES = {
     recommendations: {
-      addLabel: "une recommandation",
+      addLabel: "a recommendation",
       fields: [
-        { key: "title", label: "Nom du lieu", type: "text", placeholder: "ex. La Brisa" },
+        { key: "title", label: "Place name", type: "text", placeholder: "e.g. La Brisa" },
         { key: "type", label: "Type", type: "select", options: RECOMMENDATION_TYPES },
-        { key: "description", label: "Description", type: "textarea", placeholder: "Pourquoi le recommander, ambiance, spécialités, distance..." },
-        { key: "link", label: "Lien (Google Maps, TripAdvisor... — optionnel)", type: "text", placeholder: "https://maps.google.com/..." }
+        { key: "description", label: "Description", type: "textarea", placeholder: "Why recommend it, atmosphere, specialties, distance..." },
+        { key: "link", label: "Link (Google Maps, TripAdvisor... — optional)", type: "text", placeholder: "https://maps.google.com/..." }
       ],
-      title: function (v) { return (v.title || "Recommandation") + (v.type ? " · " + v.type : ""); },
+      title: function (v) { return (v.title || "Recommendation") + (v.type ? " · " + v.type : ""); },
       content: function (v) {
         var parts = [];
         if (v.description) parts.push(v.description);
-        if (v.link) parts.push("Plus d'infos : " + v.link);
+        if (v.link) parts.push("More info: " + v.link);
         return parts.join(" ");
       }
     },
     wifi: {
-      addLabel: "un réseau WiFi",
+      addLabel: "a WiFi network",
       fields: [
-        { key: "ssid", label: "Nom du réseau (SSID)", type: "text", placeholder: "ex. Villa_WiFi" },
-        { key: "password", label: "Mot de passe", type: "text", placeholder: "ex. Sunset88" }
+        { key: "ssid", label: "Network name (SSID)", type: "text", placeholder: "e.g. Villa_WiFi" },
+        { key: "password", label: "Password", type: "text", placeholder: "e.g. Sunset88" }
       ],
-      title: function (v) { return "Réseau WiFi" + (v.ssid ? " — " + v.ssid : ""); },
+      title: function (v) { return "WiFi network" + (v.ssid ? " — " + v.ssid : ""); },
       content: function (v) {
         var parts = [];
-        if (v.ssid) parts.push("Nom du réseau : " + v.ssid);
-        if (v.password) parts.push("Mot de passe : " + v.password);
+        if (v.ssid) parts.push("Network name: " + v.ssid);
+        if (v.password) parts.push("Password: " + v.password);
         return parts.join(". ");
       }
     },
     checkinout: {
-      addLabel: "un horaire",
+      addLabel: "a schedule",
       fields: [
-        { key: "checkIn", label: "Heure de check-in", type: "text", placeholder: "ex. 14:00" },
-        { key: "checkOut", label: "Heure de check-out", type: "text", placeholder: "ex. 11:00" },
-        { key: "lateCheckout", label: "Politique de late check-out (optionnel)", type: "textarea", placeholder: "ex. Possible selon disponibilité, supplément de 200 000 IDR. Laissez vide si non applicable." }
+        { key: "checkIn", label: "Check-in time", type: "text", placeholder: "e.g. 14:00" },
+        { key: "checkOut", label: "Check-out time", type: "text", placeholder: "e.g. 11:00" },
+        { key: "lateCheckout", label: "Late check-out policy (optional)", type: "textarea", placeholder: "e.g. Available subject to availability, 200,000 IDR surcharge. Leave blank if not applicable." }
       ],
       title: function () { return "Check-in / Check-out"; },
       content: function (v) {
         var parts = [];
-        if (v.checkIn) parts.push("Check-in à " + v.checkIn);
-        if (v.checkOut) parts.push("Check-out à " + v.checkOut);
-        if (v.lateCheckout) parts.push("Late check-out : " + v.lateCheckout);
+        if (v.checkIn) parts.push("Check-in at " + v.checkIn);
+        if (v.checkOut) parts.push("Check-out at " + v.checkOut);
+        if (v.lateCheckout) parts.push("Late check-out: " + v.lateCheckout);
         return parts.join(". ");
       }
     },
     contacts: {
-      addLabel: "un contact",
+      addLabel: "a contact",
       fields: [
-        { key: "name", label: "Nom", type: "text", placeholder: "ex. Made" },
-        { key: "role", label: "Rôle (optionnel)", type: "text", placeholder: "ex. Manager, housekeeping..." },
-        { key: "phone", label: "Téléphone / WhatsApp", type: "text", placeholder: "ex. +62 812-3456-7890" },
-        { key: "notes", label: "Précisions (optionnel)", type: "textarea", placeholder: "Horaires de disponibilité, langue parlée..." }
+        { key: "name", label: "Name", type: "text", placeholder: "e.g. Made" },
+        { key: "role", label: "Role (optional)", type: "text", placeholder: "e.g. Manager, housekeeping..." },
+        { key: "phone", label: "Phone / WhatsApp", type: "text", placeholder: "e.g. +62 812-3456-7890" },
+        { key: "notes", label: "Notes (optional)", type: "textarea", placeholder: "Availability hours, languages spoken..." }
       ],
       title: function (v) { return v.name || "Contact"; },
       content: function (v) {
         var parts = [];
         if (v.role) parts.push(v.role);
-        if (v.phone) parts.push("joignable au " + v.phone);
+        if (v.phone) parts.push("reachable at " + v.phone);
         if (v.notes) parts.push(v.notes);
         return parts.join(" — ");
       }
     },
     emergency: {
-      addLabel: "un contact d'urgence",
+      addLabel: "an emergency contact",
       fields: [
-        { key: "name", label: "Service / contact", type: "text", placeholder: "ex. Clinique BIMC Kuta" },
-        { key: "phone", label: "Téléphone", type: "text", placeholder: "ex. +62 361 761263" },
-        { key: "notes", label: "Précisions (optionnel)", type: "textarea", placeholder: "Distance, horaires, quand appeler..." }
+        { key: "name", label: "Service / contact", type: "text", placeholder: "e.g. BIMC Kuta Clinic" },
+        { key: "phone", label: "Phone", type: "text", placeholder: "e.g. +62 361 761263" },
+        { key: "notes", label: "Notes (optional)", type: "textarea", placeholder: "Distance, hours, when to call..." }
       ],
-      title: function (v) { return v.name || "Urgence"; },
+      title: function (v) { return v.name || "Emergency"; },
       content: function (v) {
         var parts = [];
-        if (v.phone) parts.push("Tél : " + v.phone);
+        if (v.phone) parts.push("Phone: " + v.phone);
         if (v.notes) parts.push(v.notes);
         return parts.join(". ");
       }
     },
     custom: {
-      addLabel: "une question",
+      addLabel: "a question",
       fields: [
-        { key: "question", label: "Question du guest", type: "text", placeholder: "ex. Peut-on amener un animal ?" },
-        { key: "answer", label: "Réponse", type: "textarea", placeholder: "Réponse à donner au guest" }
+        { key: "question", label: "Guest's question", type: "text", placeholder: "e.g. Can we bring a pet?" },
+        { key: "answer", label: "Answer", type: "textarea", placeholder: "Answer to give the guest" }
       ],
       title: function (v) { return v.question || ""; },
       content: function (v) { return v.answer || ""; }
@@ -382,7 +390,7 @@
   }
   function materializeFields(catId, fields) {
     var tmpl = templateForCategory(catId);
-    var title = (tmpl.title(fields) || "").trim() || "(sans titre)";
+    var title = (tmpl.title(fields) || "").trim() || "(untitled)";
     var content = (tmpl.content(fields) || "").trim();
     return { title: title, content: content, fields: fields };
   }
@@ -502,23 +510,23 @@
 
   function seedDemoVilla() {
     function mk(catId, fields) { return Object.assign({ category: catId }, materializeFields(catId, fields)); }
-    return api.createVilla({ name: "Villa Kembali (démo)" }).then(function (villa) {
+    return api.createVilla({ name: "Villa Kembali (demo)" }).then(function (villa) {
       var items = [
-        mk("location", { title: "Adresse", content: "Jl. Pantai Berawa No. 88, Canggu, Bali 80361, Indonésie. À 5 minutes à pied de la plage de Berawa." }),
+        mk("location", { title: "Address", content: "Jl. Pantai Berawa No. 88, Canggu, Bali 80361, Indonesia. A 5-minute walk from Berawa Beach." }),
         mk("checkinout", { checkIn: "14:00", checkOut: "11:00", lateCheckout: "" }),
         mk("wifi", { ssid: "Kembali_Villa", password: "SunsetBali88" }),
-        mk("appliances", { title: "Machine à laver", content: "La machine à laver est dans la buanderie, à côté de la cuisine. Pour un lavage normal, sélectionnez le programme Coton 40 degrés et appuyez sur Start." }),
-        mk("appliances", { title: "Four", content: "Le four est à droite de la plaque de cuisson. Tournez le bouton de gauche sur la température souhaitée puis appuyez sur le bouton central pour démarrer." }),
-        mk("ac", { title: "Climatisation", content: "La télécommande est sur la table de chevet. Appuyez sur ON/OFF puis utilisez les flèches pour régler la température entre 20 et 26 degrés." }),
-        mk("rules", { title: "Coffre-fort", content: "Le coffre-fort se trouve dans le dressing de la chambre principale, en hauteur à gauche." }),
-        mk("pool", { title: "Piscine", content: "La piscine est ouverte de 7h à 22h. Merci de ne pas plonger, la profondeur maximale est de 1m40." }),
-        mk("recommendations", { title: "La Brisa", type: "Restaurant", description: "À 10 minutes à pied, pour un dîner en bord de plage au coucher du soleil.", link: "" }),
-        mk("recommendations", { title: "Tanah Lot", type: "Visite culturelle", description: "Temple emblématique posé sur un rocher, magnifique au coucher du soleil. À 25 minutes en voiture.", link: "" }),
-        mk("supermarkets", { title: "Supermarché le plus proche", content: "Pepito Market, à 400 mètres de la villa, ouvert de 7h à 23h tous les jours." }),
-        mk("transport", { title: "Location de scooter", content: "L'équipe peut organiser une location de scooter sur demande, comptez environ 70000 IDR par jour." }),
-        mk("contacts", { name: "Made", role: "Manager de la villa", phone: "+62 812-3456-7890 (WhatsApp)", notes: "Disponible de 8h à 20h." }),
-        mk("emergency", { name: "Clinique BIMC Kuta", phone: "+62 361 761263", notes: "À 20 minutes en voiture. En cas d'urgence vitale, appelez le 112." }),
-        mk("custom", { question: "Peut-on amener un animal de compagnie ?", answer: "Non, les animaux ne sont pas acceptés dans la villa." })
+        mk("appliances", { title: "Washing machine", content: "The washing machine is in the laundry room, next to the kitchen. For a normal wash, select the Cotton 40° program and press Start." }),
+        mk("appliances", { title: "Oven", content: "The oven is to the right of the stovetop. Turn the left knob to the desired temperature, then press the center button to start." }),
+        mk("ac", { title: "Air conditioning", content: "The remote is on the nightstand. Press ON/OFF, then use the arrows to set the temperature between 20 and 26 degrees." }),
+        mk("rules", { title: "Safe", content: "The safe is in the master bedroom's closet, up on the left." }),
+        mk("pool", { title: "Pool", content: "The pool is open from 7am to 10pm. Please no diving — the maximum depth is 1.4m." }),
+        mk("recommendations", { title: "La Brisa", type: "Restaurant", description: "A 10-minute walk away, for a beachfront dinner at sunset.", link: "" }),
+        mk("recommendations", { title: "Tanah Lot", type: "Cultural visit", description: "An iconic temple perched on a rock, stunning at sunset. A 25-minute drive away.", link: "" }),
+        mk("supermarkets", { title: "Nearest supermarket", content: "Pepito Market, 400 meters from the villa, open 7am to 11pm every day." }),
+        mk("transport", { title: "Scooter rental", content: "The team can arrange a scooter rental on request, budget around 70,000 IDR per day." }),
+        mk("contacts", { name: "Made", role: "Villa manager", phone: "+62 812-3456-7890 (WhatsApp)", notes: "Available from 8am to 8pm." }),
+        mk("emergency", { name: "BIMC Kuta Clinic", phone: "+62 361 761263", notes: "A 20-minute drive away. For a life-threatening emergency, call 112." }),
+        mk("custom", { question: "Can we bring a pet?", answer: "No, pets are not allowed in the villa." })
       ];
       var chain = Promise.resolve();
       items.forEach(function (it, i) {
@@ -667,7 +675,7 @@
       setBusy(true); setError("");
       var action = mode === "signup" ? props.onSignup : props.onLogin;
       action(email.trim(), password).catch(function (e2) {
-        setError((e2 && e2.message) || "Une erreur est survenue.");
+        setError((e2 && e2.message) || "Something went wrong.");
       }).then(function () { setBusy(false); });
     }
 
@@ -676,7 +684,7 @@
         e("div", { className: "login-mark" }, e(IconBell, { size: 20 })),
         e("h2", { style: { marginBottom: "4px" } }, "Villa Concierge"),
         e("p", { className: "muted small", style: { marginBottom: "18px" } },
-          mode === "signup" ? "Créez votre compte manager." : "Espace manager — connectez-vous."
+          mode === "signup" ? "Create your manager account." : "Manager area — sign in."
         ),
         e("form", { className: "stack", onSubmit: handleSubmit },
           e("input", {
@@ -685,18 +693,18 @@
           }),
           e("input", {
             className: "input", type: "password", value: password,
-            placeholder: mode === "signup" ? "Mot de passe (8 caractères min.)" : "Mot de passe",
+            placeholder: mode === "signup" ? "Password (min. 8 characters)" : "Password",
             onChange: function (ev) { setPassword(ev.target.value); }
           }),
           error ? e("p", { className: "error-text" }, error) : null,
           e("button", { type: "submit", className: "btn btn-primary", disabled: busy || !email.trim() || !password },
-            busy ? "..." : (mode === "signup" ? "Créer le compte" : "Se connecter")
+            busy ? "..." : (mode === "signup" ? "Create account" : "Sign in")
           )
         ),
         e("button", {
           type: "button", className: "btn btn-ghost", style: { marginTop: "10px", width: "100%" },
           onClick: function () { setMode(mode === "signup" ? "login" : "signup"); setError(""); }
-        }, mode === "signup" ? "J'ai déjà un compte — se connecter" : "Pas de compte — s'inscrire")
+        }, mode === "signup" ? "Already have an account — sign in" : "No account — sign up")
       )
     );
   }
@@ -749,12 +757,12 @@
     }, [armed]);
     return e("button", {
       className: (props.className || "icon-btn danger") + (armed ? " armed" : ""),
-      title: armed ? "Cliquez pour confirmer" : (props.title || "Supprimer"),
+      title: armed ? "Click to confirm" : (props.title || "Delete"),
       onClick: function (ev) {
         ev.stopPropagation();
         if (armed) { setArmed(false); props.onConfirm(); } else { setArmed(true); }
       }
-    }, armed ? (props.confirmLabel || "Confirmer ?") : props.children);
+    }, armed ? (props.confirmLabel || "Confirm?") : props.children);
   }
 
   // ---------------------------------------------------------------------
@@ -810,11 +818,11 @@
         e(ConfirmButton, { onConfirm: function () { onDelete(villa.id); } }, e(IconTrash, { size: 15 }))
       ),
       e("h3", { className: "villa-card-title" }, villa.name),
-      e("p", { className: "villa-card-meta" }, "Créée le " + formatDate(villa.createdAt)),
-      villa.ownerEmail ? e("p", { className: "villa-card-meta" }, "Manager : " + villa.ownerEmail) : null,
+      e("p", { className: "villa-card-meta" }, "Created " + formatDate(villa.createdAt)),
+      villa.ownerEmail ? e("p", { className: "villa-card-meta" }, "Manager: " + villa.ownerEmail) : null,
       e("div", { className: "row gap", onClick: function (ev) { ev.stopPropagation(); } },
-        e(Button, { variant: "ghost", small: true, onClick: copyLink }, copied ? e(React.Fragment, null, e(IconCheck, { size: 13 }), " Copié") : e(React.Fragment, null, e(IconLink, { size: 13 }), " Lien invité")),
-        e(Button, { variant: "ghost", small: true, onClick: function () { onPreview(villa.id); } }, e(React.Fragment, null, e(IconEye, { size: 13 }), " Tester"))
+        e(Button, { variant: "ghost", small: true, onClick: copyLink }, copied ? e(React.Fragment, null, e(IconCheck, { size: 13 }), " Copied") : e(React.Fragment, null, e(IconLink, { size: 13 }), " Guest link")),
+        e(Button, { variant: "ghost", small: true, onClick: function () { onPreview(villa.id); } }, e(React.Fragment, null, e(IconEye, { size: 13 }), " Test"))
       )
     );
   }
@@ -851,31 +859,31 @@
     return e("div", { className: "page" },
       e("div", { className: "page-head" },
         e("div", null,
-          e("h1", { className: "page-title" }, "Vos villas"),
-          e("p", { className: "page-sub" }, "Gérez la base de connaissances et le concierge virtuel de chaque villa.")
+          e("h1", { className: "page-title" }, "Your villas"),
+          e("p", { className: "page-sub" }, "Manage the knowledge base and virtual concierge for each villa.")
         ),
-        e(Button, { onClick: function () { setCreating(true); } }, "+ Nouvelle villa")
+        e(Button, { onClick: function () { setCreating(true); } }, "+ New villa")
       ),
       villas.length === 0
         ? e(EmptyState, {
-            icon: e(IconHome, { size: 30 }), title: "Aucune villa pour le moment",
-            body: "Créez votre première villa, ou explorez le produit avec une villa de démonstration déjà remplie.",
+            icon: e(IconHome, { size: 30 }), title: "No villas yet",
+            body: "Create your first villa, or explore the product with an already-filled-in demo villa.",
             action: e("div", { className: "row gap" },
-              e(Button, { onClick: function () { setCreating(true); } }, "+ Nouvelle villa"),
-              e(Button, { variant: "ghost", onClick: handleSeed, disabled: busy }, busy ? "Création..." : "Charger une villa de démo")
+              e(Button, { onClick: function () { setCreating(true); } }, "+ New villa"),
+              e(Button, { variant: "ghost", onClick: handleSeed, disabled: busy }, busy ? "Creating..." : "Load a demo villa")
             )
           })
         : e("div", { className: "grid-cards" }, villas.map(function (v) {
             return e(VillaCard, { key: v.id, villa: v, navigate: navigate, onPreview: onPreview, onDelete: handleDelete });
           })),
-      creating && e(Modal, { title: "Nouvelle villa", onClose: function () { setCreating(false); } },
+      creating && e(Modal, { title: "New villa", onClose: function () { setCreating(false); } },
         e("form", { className: "stack", onSubmit: handleCreate },
-          e(Field, { label: "Nom de la villa" },
-            e("input", { className: "input", autoFocus: true, value: name, onChange: function (ev) { setName(ev.target.value); }, placeholder: "ex. Villa Kembali" })
+          e(Field, { label: "Villa name" },
+            e("input", { className: "input", autoFocus: true, value: name, onChange: function (ev) { setName(ev.target.value); }, placeholder: "e.g. Villa Kembali" })
           ),
           e("div", { className: "row gap end" },
-            e(Button, { type: "button", variant: "ghost", onClick: function () { setCreating(false); } }, "Annuler"),
-            e(Button, { type: "submit", disabled: busy || !name.trim() }, busy ? "Création..." : "Créer")
+            e(Button, { type: "button", variant: "ghost", onClick: function () { setCreating(false); } }, "Cancel"),
+            e(Button, { type: "submit", disabled: busy || !name.trim() }, busy ? "Creating..." : "Create")
           )
         )
       )
@@ -895,7 +903,7 @@
     if (f.type === "select") {
       return e(Field, { label: f.label },
         e("select", { className: "input", value: props.value, onChange: function (ev) { props.onChange(ev.target.value); } },
-          e("option", { value: "" }, "Sélectionner..."),
+          e("option", { value: "" }, "Select..."),
           (f.options || []).map(function (o) { return e("option", { key: o, value: o }, o); })
         )
       );
@@ -925,9 +933,9 @@
         if (dataUrl.length > 180000) return compressImage(file, 320, 0.45);
         return dataUrl;
       }).then(function (dataUrl) {
-        if (dataUrl.length > 180000) { setError("Image trop lourde même compressée, essayez une photo plus simple."); return; }
+        if (dataUrl.length > 180000) { setError("Image too large even after compression — try a simpler photo."); return; }
         setPhoto(dataUrl);
-      }).catch(function () { setError("Impossible de charger cette image."); });
+      }).catch(function () { setError("Couldn't load this image."); });
     }
 
     function handleSave(ev) {
@@ -935,30 +943,30 @@
       var trimmed = {};
       tmpl.fields.forEach(function (f) { trimmed[f.key] = (values[f.key] || "").trim(); });
       var anyFilled = tmpl.fields.some(function (f) { return trimmed[f.key]; });
-      if (!anyFilled) { setError("Merci de renseigner au moins un champ."); return; }
+      if (!anyFilled) { setError("Please fill in at least one field."); return; }
       setBusy(true); setError("");
       var payload = Object.assign(materializeFields(category, trimmed), { photo: photo || null, fields: trimmed });
       var task = initial
         ? api.updateKnowledge(villaId, initial.id, payload)
         : api.addKnowledge(villaId, Object.assign({ category: category, order: Date.now() }, payload));
-      task.then(function () { setBusy(false); props.onDone(); }).catch(function () { setBusy(false); setError("Erreur lors de l'enregistrement."); });
+      task.then(function () { setBusy(false); props.onDone(); }).catch(function () { setBusy(false); setError("Error while saving."); });
     }
 
     return e("form", { className: "kb-form", onSubmit: handleSave },
       tmpl.fields.map(function (f, idx) {
         return e(TemplateField, { key: f.key, field: f, value: values[f.key] || "", autoFocus: idx === 0, onChange: function (val) { setField(f.key, val); } });
       }),
-      e(Field, { label: "Photo (facultatif)" },
+      e(Field, { label: "Photo (optional)" },
         e("div", { className: "row gap" },
           photo ? e("img", { className: "kb-photo-preview", src: photo }) : null,
           e("input", { type: "file", accept: "image/*", onChange: handleFile }),
-          photo ? e("button", { type: "button", className: "link-danger", onClick: function () { setPhoto(null); } }, "Retirer") : null
+          photo ? e("button", { type: "button", className: "link-danger", onClick: function () { setPhoto(null); } }, "Remove") : null
         )
       ),
       error ? e("p", { className: "error-text" }, error) : null,
       e("div", { className: "row gap end" },
-        e(Button, { type: "button", variant: "ghost", onClick: props.onCancel }, "Annuler"),
-        e(Button, { type: "submit", disabled: busy }, busy ? "Enregistrement..." : "Enregistrer")
+        e(Button, { type: "button", variant: "ghost", onClick: props.onCancel }, "Cancel"),
+        e(Button, { type: "submit", disabled: busy }, busy ? "Saving..." : "Save")
       )
     );
   }
@@ -979,7 +987,7 @@
         e("div", { className: "kb-item-content" }, item.content)
       ),
       e("div", { className: "kb-item-actions" },
-        e("button", { className: "icon-btn", title: "Modifier", onClick: function () { setEditing(true); } }, e(IconEdit, { size: 14 })),
+        e("button", { className: "icon-btn", title: "Edit", onClick: function () { setEditing(true); } }, e(IconEdit, { size: 14 })),
         e(ConfirmButton, { onConfirm: function () { api.deleteKnowledge(props.villaId, item.id).then(props.onChanged); } }, e(IconTrash, { size: 14 }))
       )
     );
@@ -996,13 +1004,13 @@
         e("span", { className: "cat-chevron" }, open ? e(IconChevronDown, { size: 14 }) : e(IconChevronRight, { size: 14 }))
       ),
       open ? e("div", { className: "cat-body" },
-        (items.length === 0 && !props.adding) ? e("p", { className: "muted small" }, "Aucune information pour cette catégorie.") : null,
+        (items.length === 0 && !props.adding) ? e("p", { className: "muted small" }, "No information for this category yet.") : null,
         items.map(function (it) {
           return e(KnowledgeItemRow, { key: it.id, item: it, villaId: props.villaId, onChanged: props.onChanged });
         }),
         props.adding
           ? e(KnowledgeItemForm, { villaId: props.villaId, category: cat.id, onDone: function () { props.onCancelAdd(); props.onChanged(); }, onCancel: props.onCancelAdd })
-          : e(Button, { variant: "ghost", small: true, onClick: props.onAdd }, "+ Ajouter " + (tmpl.addLabel || "une information"))
+          : e(Button, { variant: "ghost", small: true, onClick: props.onAdd }, "+ Add " + (tmpl.addLabel || "an item"))
       ) : null
     );
   }
@@ -1020,7 +1028,7 @@
 
     return e("div", { className: "stack lg" },
       e("div", { className: "kb-progress" },
-        e("span", null, filledCount + " / " + CATEGORIES.length + " catégories renseignées"),
+        e("span", null, filledCount + " / " + CATEGORIES.length + " categories filled in"),
         e("div", { className: "progress-bar" }, e("div", { className: "progress-fill", style: { width: Math.round(filledCount / CATEGORIES.length * 100) + "%" } }))
       ),
       CATEGORIES.map(function (c) {
@@ -1079,17 +1087,17 @@
         e("p", { className: "qr-caption" }, "Need help? Chat with your virtual concierge.")
       ),
       e("div", { className: "stack" },
-        e(Field, { label: "Lien invité (à imprimer ou partager)" },
+        e(Field, { label: "Guest link (to print or share)" },
           e("div", { className: "row gap" },
             e("input", { className: "input", readOnly: true, value: url, onFocus: function (ev) { ev.target.select(); } }),
-            e(Button, { variant: "ghost", onClick: copyLink }, copied ? e(React.Fragment, null, e(IconCheck, { size: 13 }), " Copié") : "Copier")
+            e(Button, { variant: "ghost", onClick: copyLink }, copied ? e(React.Fragment, null, e(IconCheck, { size: 13 }), " Copied") : "Copy")
           )
         ),
         e("div", { className: "row gap" },
-          e(Button, { onClick: function () { props.onPreview(villa.id); } }, e(React.Fragment, null, e(IconEye, { size: 14 }), " Tester le chat")),
-          dataUrl ? e(Button, { variant: "ghost", onClick: handleDownload }, e(React.Fragment, null, e(IconDownload, { size: 14 }), " Télécharger le QR code")) : null
+          e(Button, { onClick: function () { props.onPreview(villa.id); } }, e(React.Fragment, null, e(IconEye, { size: 14 }), " Test chat")),
+          dataUrl ? e(Button, { variant: "ghost", onClick: handleDownload }, e(React.Fragment, null, e(IconDownload, { size: 14 }), " Download QR code")) : null
         ),
-        e("p", { className: "muted small" }, "Le bouton \"Tester le chat\" ouvre un aperçu ici même. Pour un vrai guest, imprimez le QR code ou partagez le lien ci-dessus : il ouvre directement le chat, sans compte ni application.")
+        e("p", { className: "muted small" }, "The \"Test chat\" button opens a preview right here. For a real guest, print the QR code or share the link above: it opens the chat directly, with no account or app needed.")
       )
     );
   }
@@ -1126,37 +1134,37 @@
         props.onChanged();
       }).catch(function () {
         setSendingReply(false);
-        setReplyErr("Échec de l'envoi — réessayez.");
+        setReplyErr("Failed to send — please try again.");
       });
     }
 
     return e("div", { className: "convo-row", id: "convo-" + convo.id },
       e("button", { className: "convo-summary", onClick: props.onToggle },
-        e("span", { className: "convo-badge" + (needing ? " warn" : "") }, needing ? "A traiter" : (convo.needsHuman ? "Traitee" : "Resolue auto")),
-        e("span", { className: "convo-snippet" }, firstUser ? firstUser.content : "(conversation vide)"),
+        e("span", { className: "convo-badge" + (needing ? " warn" : "") }, needing ? "Needs attention" : (convo.needsHuman ? "Handled" : "Auto-resolved")),
+        e("span", { className: "convo-snippet" }, firstUser ? firstUser.content : "(empty conversation)"),
         e("span", { className: "convo-time" }, formatDate(convo.updatedAt) + " " + formatTime(convo.updatedAt))
       ),
       props.open ? e("div", { className: "convo-thread" },
         messages.map(function (m, idx) {
           return e("div", { key: idx, className: "msg-bubble " + m.role },
-            m.role === "manager" ? e("span", { className: "msg-manager-label" }, "Vous (propriétaire)") : null,
+            m.role === "manager" ? e("span", { className: "msg-manager-label" }, "You (owner)") : null,
             m.content
           );
         }),
         e("form", { className: "row gap convo-reply-form", onSubmit: sendReply },
           e("input", {
-            className: "input", placeholder: "Répondre au guest en votre nom…",
+            className: "input", placeholder: "Reply to the guest on your behalf…",
             value: replyText, disabled: sendingReply,
             onChange: function (ev) { setReplyText(ev.target.value); }
           }),
-          e(Button, { type: "submit", small: true, disabled: sendingReply || !replyText.trim() }, sendingReply ? "…" : "Envoyer")
+          e(Button, { type: "submit", small: true, disabled: sendingReply || !replyText.trim() }, sendingReply ? "…" : "Send")
         ),
         replyErr ? e("p", { className: "error-text small" }, replyErr) : null,
         convo.needsHuman ? e("div", { className: "row gap", style: { marginTop: "10px" } },
           e(Button, {
             small: true, variant: convo.handled ? "ghost" : "primary",
             onClick: function () { api.setConversationHandled(props.villaId, convo.id, !convo.handled).then(props.onChanged); }
-          }, convo.handled ? "Marquer comme non traitee" : e(React.Fragment, null, e(IconCheck, { size: 13 }), " Marquer comme traitee"))
+          }, convo.handled ? "Mark as not handled" : e(React.Fragment, null, e(IconCheck, { size: 13 }), " Mark as handled"))
         ) : null
       ) : null
     );
@@ -1175,7 +1183,7 @@
     }, [convos, props.initialConvoId]);
 
     if (convos === null) return e(LoadingBlock);
-    if (convos.length === 0) return e(EmptyState, { icon: e(IconMessage, { size: 30 }), title: "Aucune conversation pour le moment", body: "Des qu'un guest posera une question via le QR code, elle apparaitra ici." });
+    if (convos.length === 0) return e(EmptyState, { icon: e(IconMessage, { size: 30 }), title: "No conversations yet", body: "As soon as a guest asks a question via the QR code, it will show up here." });
 
     var needing = convos.filter(function (c) { return c.needsHuman && !c.handled; });
     var topicCounts = {}; var answeredCount = 0, totalQA = 0;
@@ -1195,14 +1203,14 @@
     return e("div", { className: "stack lg" },
       e("div", { className: "stats-row" },
         e(StatTile, { label: "Conversations", value: convos.length }),
-        e(StatTile, { label: "Resolues automatiquement", value: totalQA ? Math.round(answeredCount / totalQA * 100) + "%" : "—" }),
-        e(StatTile, { label: "Nécessitent une intervention", value: needing.length, tone: needing.length ? "warn" : "good" })
+        e(StatTile, { label: "Auto-resolved", value: totalQA ? Math.round(answeredCount / totalQA * 100) + "%" : "—" }),
+        e(StatTile, { label: "Need attention", value: needing.length, tone: needing.length ? "warn" : "good" })
       ),
       topicList.length > 0 ? e("div", { className: "card" },
-        e("h3", { className: "block-title" }, "Questions les plus fréquentes"),
+        e("h3", { className: "block-title" }, "Most frequent questions"),
         e("div", { className: "topic-bars" }, topicList.slice(0, 8).map(function (pair) {
           var t = pair[0], count = pair[1];
-          var label = (CAT_BY_ID[t] && CAT_BY_ID[t].label) || "Autre";
+          var label = (CAT_BY_ID[t] && CAT_BY_ID[t].label) || "Other";
           return e("div", { key: t, className: "topic-bar-row" },
             e("span", { className: "topic-bar-label" }, label),
             e("div", { className: "topic-bar-track" }, e("div", { className: "topic-bar-fill", style: { width: Math.round(count / maxTopic * 100) + "%" } })),
@@ -1211,7 +1219,7 @@
         }))
       ) : null,
       e("div", { className: "row gap" }, ["all", "needing", "handled"].map(function (f) {
-        var labelMap = { all: "Toutes", needing: "A traiter", handled: "Traitees" };
+        var labelMap = { all: "All", needing: "Needs attention", handled: "Handled" };
         return e("button", { key: f, className: "chip" + (filter === f ? " active" : ""), onClick: function () { setFilter(f); } }, labelMap[f]);
       })),
       e("div", { className: "convo-list" }, filtered.map(function (c) {
@@ -1238,7 +1246,7 @@
       if (!name.trim()) return;
       setBusy(true);
       api.updateVilla(villa.id, { name: name.trim() }).then(function () {
-        setBusy(false); setSaved("Enregistré."); onChanged();
+        setBusy(false); setSaved("Saved."); onChanged();
         setTimeout(function () { setSaved(""); }, 1500);
       }).catch(function () { setBusy(false); });
     }
@@ -1246,22 +1254,22 @@
     return e("div", { className: "stack lg" },
       e("div", { className: "card" },
         e("form", { className: "stack", onSubmit: handleSave },
-          e(Field, { label: "Nom de la villa" },
+          e(Field, { label: "Villa name" },
             e("input", { className: "input", value: name, onChange: function (ev) { setName(ev.target.value); } })
           ),
           e("div", { className: "row gap" },
-            e(Button, { type: "submit", disabled: busy || !name.trim() }, busy ? "Enregistrement..." : "Enregistrer"),
+            e(Button, { type: "submit", disabled: busy || !name.trim() }, busy ? "Saving..." : "Save"),
             saved ? e("span", { className: "muted small" }, saved) : null
           )
         )
       ),
       e("div", { className: "card" },
-        e("h3", { className: "block-title" }, "Zone dangereuse"),
-        e("p", { className: "muted small", style: { marginBottom: "10px" } }, "La suppression d'une villa efface son accès invité. Cette action est définitive."),
+        e("h3", { className: "block-title" }, "Danger zone"),
+        e("p", { className: "muted small", style: { marginBottom: "10px" } }, "Deleting a villa removes its guest access. This action is permanent."),
         e(ConfirmButton, {
-          className: "btn btn-ghost", confirmLabel: "Confirmer la suppression",
+          className: "btn btn-ghost", confirmLabel: "Confirm deletion",
           onConfirm: function () { api.deleteVilla(villa.id).then(function () { navigate({ screen: "dashboard" }); }); }
-        }, e(React.Fragment, null, e(IconTrash, { size: 14 }), " Supprimer cette villa"))
+        }, e(React.Fragment, null, e(IconTrash, { size: 14 }), " Delete this villa"))
       )
     );
   }
@@ -1275,24 +1283,24 @@
 
     if (villa === undefined) return e(LoadingBlock);
     if (villa === null) return e(EmptyState, {
-      icon: e(IconHelp, { size: 30 }), title: "Villa introuvable", body: "Cette villa n'existe plus ou le lien est incorrect.",
-      action: e(Button, { onClick: function () { navigate({ screen: "dashboard" }); } }, "Retour aux villas")
+      icon: e(IconHelp, { size: 30 }), title: "Villa not found", body: "This villa no longer exists or the link is incorrect.",
+      action: e(Button, { onClick: function () { navigate({ screen: "dashboard" }); } }, "Back to villas")
     });
 
     var tabs = [
-      { id: "knowledge", label: "Base de connaissances" },
-      { id: "qr", label: "QR code & lien" },
+      { id: "knowledge", label: "Knowledge base" },
+      { id: "qr", label: "QR code & link" },
       { id: "conversations", label: "Conversations" },
-      { id: "settings", label: "Réglages" }
+      { id: "settings", label: "Settings" }
     ];
     var activeTab = tabs.some(function (t) { return t.id === tab; }) ? tab : "knowledge";
 
     return e("div", { className: "page" },
-      e("button", { className: "link-back", onClick: function () { navigate({ screen: "dashboard" }); } }, e(IconArrowLeft, { size: 13 }), "Toutes les villas"),
+      e("button", { className: "link-back", onClick: function () { navigate({ screen: "dashboard" }); } }, e(IconArrowLeft, { size: 13 }), "All villas"),
       e("div", { className: "page-head" },
         e("div", null,
           e("h1", { className: "page-title" }, villa.name),
-          e("p", { className: "page-sub" }, "Concierge virtuel — disponible 24h/24 pour vos guests.")
+          e("p", { className: "page-sub" }, "Virtual concierge — available 24/7 for your guests.")
         )
       ),
       e(Tabs, { tabs: tabs, active: activeTab, onChange: function (id) { navigate({ screen: "villa", villa: villaId, tab: id }, { replace: true }); } }),
@@ -1439,7 +1447,7 @@
         ) : null,
         messages.map(function (m, idx) {
           return e("div", { key: idx, className: "msg-bubble " + m.role },
-            m.role === "manager" ? e("span", { className: "msg-manager-label" }, "Réponse du propriétaire") : null,
+            m.role === "manager" ? e("span", { className: "msg-manager-label" }, "Reply from the owner") : null,
             m.content
           );
         }),
@@ -1470,8 +1478,8 @@
         ),
         e("div", { className: "row gap" },
           e("span", { className: "topbar-tag" }, "Your virtual villa concierge, available 24/7"),
-          e("button", { className: "icon-btn", title: "Mon profil", onClick: function () { setShowProfile(true); } }, e(IconUser, { size: 17 })),
-          e("button", { className: "icon-btn", title: "Se déconnecter", onClick: props.onLogout }, e(IconLogOut, { size: 17 }))
+          e("button", { className: "topbar-icon-btn", title: "My profile", onClick: function () { setShowProfile(true); } }, e(IconUser, { size: 19 })),
+          e("button", { className: "topbar-icon-btn", title: "Log out", onClick: props.onLogout }, e(IconLogOut, { size: 19 }))
         )
       ),
       props.children,
@@ -1500,36 +1508,36 @@
       setBusy(true); setError(""); setSaved("");
       props.onUpdateProfile({ phone: phone.trim(), notifyEmail: notifyEmail, notifyWhatsapp: notifyWhatsapp }).then(function () {
         setBusy(false);
-        setSaved("Enregistré.");
+        setSaved("Saved.");
       }).catch(function (e2) {
         setBusy(false);
-        setError((e2 && e2.message) || "Une erreur est survenue.");
+        setError((e2 && e2.message) || "Something went wrong.");
       });
     }
 
-    return e(Modal, { title: "Mon profil", onClose: props.onClose },
+    return e(Modal, { title: "My profile", onClose: props.onClose },
       e("div", { className: "stack" },
         e(Field, { label: "Email" }, e("input", { className: "input", value: manager.email || "", disabled: true })),
         e("form", { className: "stack", onSubmit: handleSave },
-          e(Field, { label: "Téléphone WhatsApp (optionnel)" },
+          e(Field, { label: "WhatsApp phone number (optional)" },
             e("input", {
               className: "input", value: phone, placeholder: "+33612345678",
               onChange: function (ev) { setPhone(ev.target.value); }
             })
           ),
           e("div", { className: "switch-row" },
-            e("span", { className: "switch-label" }, "Alertes par email"),
+            e("span", { className: "switch-label" }, "Email alerts"),
             e(Switch, { checked: notifyEmail, onChange: setNotifyEmail })
           ),
           e("div", { className: "switch-row" },
-            e("span", { className: "switch-label" }, "Alertes par WhatsApp"),
+            e("span", { className: "switch-label" }, "WhatsApp alerts"),
             e(Switch, { checked: notifyWhatsapp, onChange: setNotifyWhatsapp })
           ),
-          e("p", { className: "muted small" }, "Une question sans réponse automatique déclenche une alerte sur les canaux activés ci-dessus (le WhatsApp ne partira que si un numéro est renseigné)."),
+          e("p", { className: "muted small" }, "A question that isn't answered automatically triggers an alert on the channels enabled above (WhatsApp will only be sent if a number is provided)."),
           error ? e("p", { className: "error-text" }, error) : null,
           saved ? e("p", { className: "muted small" }, saved) : null,
           e("div", { className: "row gap end" },
-            e(Button, { type: "submit", disabled: busy }, busy ? "..." : "Enregistrer")
+            e(Button, { type: "submit", disabled: busy }, busy ? "..." : "Save")
           )
         )
       )
@@ -1539,8 +1547,8 @@
   function GuestPreviewOverlay(props) {
     return e("div", { className: "preview-overlay" },
       e("div", { className: "preview-bar" },
-        e("span", { className: "row gap" }, e(IconEye, { size: 14 }), "Aperçu du chat guest"),
-        e("button", { className: "btn btn-ghost btn-small", onClick: props.onExit }, e(React.Fragment, null, e(IconX, { size: 13 }), " Fermer l'aperçu"))
+        e("span", { className: "row gap" }, e(IconEye, { size: 14 }), "Guest chat preview"),
+        e("button", { className: "btn btn-ghost btn-small", onClick: props.onExit }, e(React.Fragment, null, e(IconX, { size: 13 }), " Close preview"))
       ),
       e("div", { className: "preview-body" }, e(GuestApp, { villaId: props.villaId }))
     );
