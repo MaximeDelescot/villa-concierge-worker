@@ -259,7 +259,7 @@ function buildSystemPrompt(villa, items, locale) {
     "- Use only the information below about this villa. Never invent, assume or guess any detail about the villa, its equipment, its policies, or its surroundings."
   );
   lines.push(
-    "- If the guest asks something that is not covered below, say clearly and politely that you don't have that information. Their question is automatically forwarded to the villa manager the moment you say this, so state that as a fact that has already happened (e.g. \"I've passed your question on to the manager, who will get back to you\") — never phrase it as something you could do or are offering to do (never say \"I can pass this along\" or \"let me relay this\"). Never guess to fill a gap."
+    "- If the guest asks something that is not covered below, say clearly and politely that you don't have that information. Their question is automatically forwarded to the villa manager the moment you say this, so state that as a fact that has already happened — never phrase it as something you could do or are offering to do (never say \"I can pass this along\" or \"let me relay this\"). Phrase this the way a native speaker naturally would in whatever language you're replying in — never as a stiff, word-for-word translation of an English template. For example, in English: \"I don't have that information, but I've already let the manager know — they'll get back to you shortly.\" In French, a natural phrasing would be: \"Je n'ai pas cette information, mais j'ai déjà prévenu le manager, qui reviendra vers vous rapidement.\" Never guess to fill a gap."
   );
   const langName = localeLanguageName(locale);
   lines.push(
@@ -353,6 +353,96 @@ async function askClaude(env, systemPrompt, turns) {
     throw e;
   }
   return text;
+}
+
+// ---------------------------------------------------------------------
+// Translation — lets a manager reply in their own language while the
+// guest always reads the translated version, and the reverse: a manager
+// reading a conversation always sees it in their own browser language.
+// Reuses the same Anthropic call as the concierge itself (askClaude);
+// each message caches its translations by target language directly in
+// messages_json, so a given message is only ever translated once per
+// language, however many times the conversation is reopened afterward.
+// ---------------------------------------------------------------------
+function shortLocale(locale) {
+  return String(locale || "")
+    .toLowerCase()
+    .split(/[-_]/)[0]
+    .replace(/[^a-z]/g, "")
+    .slice(0, 8);
+}
+
+function parseAcceptLanguage(header) {
+  if (!header) return "";
+  return (header.split(",")[0] || "").split(";")[0].trim();
+}
+
+async function translateBatch(env, texts, targetLangName) {
+  if (!texts.length) return texts.slice();
+  const numbered = texts.map((t, i) => (i + 1) + ". " + String(t || "").replace(/\n/g, " ⏎ ")).join("\n");
+  const system =
+    "You are a translation engine embedded in a guest-messaging product. Translate each numbered line into " +
+    targetLangName +
+    ". If a line is already written in " +
+    targetLangName +
+    ", return that exact line unchanged. Keep every ⏎ marker exactly where it is (it stands for a line break) — never drop it or move it. " +
+    'Respond ONLY with a JSON array of strings, in the same order and count as the input lines, no markdown fences, e.g. ["translation 1", "translation 2"].';
+  try {
+    const raw = await askClaude(env, system, [{ role: "user", content: numbered }]);
+    const parsed = parseLenientJson(raw);
+    if (Array.isArray(parsed) && parsed.length === texts.length) {
+      return parsed.map((t) => String(t == null ? "" : t).split(" ⏎ ").join("\n"));
+    }
+  } catch (e) {
+    // best-effort — translation failing should never break the chat
+  }
+  return texts.slice();
+}
+
+// Makes sure every eligible message in `messages` has a cached translation
+// for `targetLocale`, translating whatever's missing in a single batched
+// call. `roles`, when given, limits translation to messages authored by
+// those roles (e.g. only "manager" messages need translating for a guest,
+// since the guest's own messages and the AI's replies are already in their
+// language). Returns `view` (messages with `content` swapped to the
+// translation, ready to send to the client) and `stored` (the same
+// messages with the translation cache attached, ready to persist).
+async function withTranslations(env, messages, targetLocale, roles) {
+  const shortTarget = shortLocale(targetLocale);
+  if (!shortTarget) return { view: messages, stored: messages, changed: false };
+  const langName = localeLanguageName(shortTarget) || shortTarget;
+  const missingIdx = [];
+  for (let i = 0; i < messages.length; i++) {
+    const m = messages[i];
+    if (roles && roles.indexOf(m.role) === -1) continue;
+    if (m.content && m.content.trim() && !(m.translations && m.translations[shortTarget])) {
+      missingIdx.push(i);
+    }
+  }
+  let stored = messages;
+  let changed = false;
+  if (missingIdx.length) {
+    const translated = await translateBatch(env, missingIdx.map((i) => messages[i].content), langName);
+    stored = messages.slice();
+    missingIdx.forEach((i, k) => {
+      const m = stored[i];
+      const translations = Object.assign({}, m.translations || {});
+      translations[shortTarget] = translated[k];
+      stored[i] = Object.assign({}, m, { translations });
+    });
+    changed = true;
+  }
+  const view = stored.map((m) => {
+    const t = m.translations && m.translations[shortTarget];
+    return t ? Object.assign({}, m, { content: t }) : m;
+  });
+  return { view, stored, changed };
+}
+
+function stripInternalMessageFields(m) {
+  const copy = Object.assign({}, m);
+  delete copy.translations;
+  return copy;
 }
 
 // ---------------------------------------------------------------------
@@ -483,25 +573,51 @@ async function deleteKnowledge(env, villaId, itemId) {
   return json({ ok: true });
 }
 
-async function listConversations(env, villaId) {
+async function listConversations(env, villaId, request) {
   const { results } = await env.DB.prepare(
     "SELECT * FROM conversations WHERE villa_id = ? ORDER BY updated_at DESC LIMIT 200"
   )
     .bind(villaId)
     .all();
-  return json(results.map(rowToConversation));
+  // A manager should never have to read a guest's conversation in a
+  // language they don't speak — translate everything into whatever
+  // language their own browser is set to, mirroring what /reply does for
+  // the guest in the other direction.
+  const targetLocale = parseAcceptLanguage(request && request.headers.get("Accept-Language"));
+  const out = await Promise.all(
+    results.map(async (r) => {
+      if (!targetLocale) return rowToConversation(r);
+      let messages = [];
+      try {
+        messages = JSON.parse(r.messages_json || "[]");
+      } catch (e) {}
+      if (!messages.length) return rowToConversation(r, messages);
+      const result = await withTranslations(env, messages, targetLocale);
+      if (result.changed) {
+        await env.DB.prepare("UPDATE conversations SET messages_json = ? WHERE id = ?")
+          .bind(JSON.stringify(result.stored), r.id)
+          .run();
+      }
+      return rowToConversation(r, result.view);
+    })
+  );
+  return json(out);
 }
-function rowToConversation(r) {
-  let messages = [];
-  try {
-    messages = JSON.parse(r.messages_json || "[]");
-  } catch (e) {}
+function rowToConversation(r, overrideMessages) {
+  let messages = overrideMessages;
+  if (!messages) {
+    try {
+      messages = JSON.parse(r.messages_json || "[]");
+    } catch (e) {
+      messages = [];
+    }
+  }
   return {
     id: r.id,
     sessionId: r.session_id,
     startedAt: r.started_at,
     updatedAt: r.updated_at,
-    messages,
+    messages: messages.map(stripInternalMessageFields),
     needsHuman: !!r.needs_human,
     handled: !!r.handled,
   };
@@ -519,7 +635,14 @@ async function addManagerReply(env, villaId, convoId, body) {
     messages = JSON.parse(row.messages_json || "[]");
   } catch (e) {}
   const managerMsg = { role: "manager", content: message, ts: nowIso() };
-  const newMessages = messages.concat([managerMsg]);
+  let newMessages = messages.concat([managerMsg]);
+  // The manager writes in whatever language they're comfortable in; the
+  // guest always needs to read it in their own — translate it right away
+  // so it's ready the moment the guest's chat polls for new messages.
+  if (row.guest_locale) {
+    const result = await withTranslations(env, newMessages, row.guest_locale, ["manager"]);
+    newMessages = result.stored;
+  }
   const ts = nowIso();
   // A reply from the manager counts as the conversation having been taken
   // care of by a human, so clear the "needs attention" flag. `handled` stays
@@ -542,7 +665,7 @@ async function updateConversationHandled(env, villaId, convoId, body) {
 
 async function getSession(env, villaId, sessionId) {
   const row = await env.DB.prepare(
-    "SELECT messages_json FROM conversations WHERE villa_id = ? AND session_id = ?"
+    "SELECT messages_json, guest_locale FROM conversations WHERE villa_id = ? AND session_id = ?"
   )
     .bind(villaId, sessionId)
     .first();
@@ -551,7 +674,16 @@ async function getSession(env, villaId, sessionId) {
   try {
     messages = JSON.parse(row.messages_json || "[]");
   } catch (e) {}
-  return json({ messages });
+  if (row.guest_locale && messages.length) {
+    const result = await withTranslations(env, messages, row.guest_locale, ["manager"]);
+    if (result.changed) {
+      await env.DB.prepare("UPDATE conversations SET messages_json = ? WHERE villa_id = ? AND session_id = ?")
+        .bind(JSON.stringify(result.stored), villaId, sessionId)
+        .run();
+    }
+    messages = result.view;
+  }
+  return json({ messages: messages.map(stripInternalMessageFields) });
 }
 
 function escapeHtml(s) {
@@ -730,16 +862,19 @@ async function chat(env, villaId, body, baseUrl) {
     // The flag reflects only the latest exchange: it clears the moment the
     // AI manages to answer on its own, and is set again the moment it asks
     // for the manager's help — it is not sticky across turns.
+    // `guest_locale` is refreshed rather than cleared, so a manager's later
+    // reply can always be translated into whatever language the guest is
+    // currently using.
     await env.DB.prepare(
-      "UPDATE conversations SET messages_json = ?, updated_at = ?, needs_human = ? WHERE id = ?"
+      "UPDATE conversations SET messages_json = ?, updated_at = ?, needs_human = ?, guest_locale = COALESCE(?, guest_locale) WHERE id = ?"
     )
-      .bind(JSON.stringify(newMessages), ts, answered ? 0 : 1, convoId)
+      .bind(JSON.stringify(newMessages), ts, answered ? 0 : 1, locale || null, convoId)
       .run();
   } else {
     await env.DB.prepare(
-      "INSERT INTO conversations (id, villa_id, session_id, started_at, updated_at, messages_json, needs_human, handled) VALUES (?,?,?,?,?,?,?,0)"
+      "INSERT INTO conversations (id, villa_id, session_id, started_at, updated_at, messages_json, needs_human, handled, guest_locale) VALUES (?,?,?,?,?,?,?,0,?)"
     )
-      .bind(convoId, villaId, sessionId, ts, ts, JSON.stringify(newMessages), answered ? 0 : 1)
+      .bind(convoId, villaId, sessionId, ts, ts, JSON.stringify(newMessages), answered ? 0 : 1, locale || null)
       .run();
   }
 
@@ -879,7 +1014,7 @@ export default {
           if (owns.errorResponse) return owns.errorResponse;
           const convoId = parts[4];
           if (!convoId) {
-            if (request.method === "GET") return await listConversations(env, villaId);
+            if (request.method === "GET") return await listConversations(env, villaId, request);
             return err(405, "method not allowed");
           }
           const convoSub = parts[5];
