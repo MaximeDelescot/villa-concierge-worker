@@ -665,7 +665,7 @@ async function notifyManagerUnanswered(env, villa, question, convoId, baseUrl) {
       contact = await env.DB.prepare("SELECT email, phone, notify_email, notify_whatsapp FROM managers WHERE is_admin = 1 ORDER BY created_at ASC LIMIT 1").first();
     }
     if (!contact || !baseUrl) return;
-    const conversationUrl = baseUrl + "/#screen=villa&villa=" + villa.id + "&tab=conversations&convo=" + convoId;
+    const conversationUrl = baseUrl + "/app#screen=villa&villa=" + villa.id + "&tab=conversations&convo=" + convoId;
     const wantsEmail = contact.notify_email === null || contact.notify_email === undefined ? true : !!contact.notify_email;
     const wantsWhatsapp = contact.notify_whatsapp === null || contact.notify_whatsapp === undefined ? true : !!contact.notify_whatsapp;
     await Promise.all([
@@ -771,7 +771,7 @@ export default {
         ? await env.DB.prepare("SELECT villa_id FROM conversations WHERE id = ?").bind(shortConvoId).first()
         : null;
       const dest = convoRow
-        ? url.origin + "/#screen=villa&villa=" + convoRow.villa_id + "&tab=conversations&convo=" + shortConvoId
+        ? url.origin + "/app#screen=villa&villa=" + convoRow.villa_id + "&tab=conversations&convo=" + shortConvoId
         : url.origin;
       return Response.redirect(dest, 302);
     }
