@@ -206,7 +206,10 @@
   .msg-bubble.user{ background:var(--surface-2); color:var(--ink); border-bottom-right-radius:4px; }
   .msg-bubble.assistant, .msg-bubble.manager{ background:var(--accent-soft); color:var(--ink); border-bottom-left-radius:4px; }
   .msg-bubble.assistant.escalated{ background:var(--warn-soft); color:var(--ink); border-bottom-left-radius:4px; }
-  .msg-manager-label{ display:block; font-family:'IBM Plex Mono',monospace; font-size:10.5px; font-weight:500; text-transform:uppercase; letter-spacing:.06em; color:var(--accent); margin-bottom:3px; }
+  .msg-role-label{ display:block; font-family:'IBM Plex Mono',monospace; font-size:10.5px; font-weight:500; text-transform:uppercase; letter-spacing:.06em; margin-bottom:3px; }
+  .msg-role-label.user{ color:var(--ink-faint); }
+  .msg-role-label.assistant, .msg-role-label.manager{ color:var(--accent); }
+  .msg-role-label.assistant.escalated{ color:var(--warn); }
   .convo-thread .msg-row{ max-width:100%; }
   .convo-reply-form{ margin-top:10px; }
 
@@ -1158,10 +1161,11 @@
         messages.map(function (m, idx) {
           var escalated = m.role === "assistant" && m.answered === false;
           var roleIcon = m.role === "manager" ? e(IconCornerUpLeft, { size: 13 }) : m.role === "assistant" ? e(IconBell, { size: 13 }) : e(IconMessageSquare, { size: 13 });
+          var roleLabel = m.role === "manager" ? "You (owner)" : m.role === "assistant" ? (escalated ? "Virtual concierge · question forwarded" : "Virtual concierge · instant reply") : "Guest";
           return e("div", { key: idx, className: "msg-row " + m.role },
             e("div", { className: "msg-icon " + m.role + (escalated ? " escalated" : "") }, roleIcon),
             e("div", { className: "msg-bubble " + m.role + (escalated ? " escalated" : "") },
-              m.role === "manager" ? e("span", { className: "msg-manager-label" }, "You (owner)") : null,
+              e("span", { className: "msg-role-label " + m.role + (escalated ? " escalated" : "") }, roleLabel),
               m.content
             )
           );
@@ -1341,18 +1345,18 @@
     catch (err) { return ""; }
   }
   var GUEST_I18N = {
-    en: { sub: "Virtual concierge · available 24/7", welcome: "Hi! Ask me anything about your stay — check-in, WiFi, the villa's equipment, or local recommendations.", suggestions: ["WiFi password?", "What time is check-out?", "Nearby restaurants?"], placeholder: "Type your question…", notFound: "This villa link doesn't exist anymore." },
-    fr: { sub: "Concierge virtuel · disponible 24h/24", welcome: "Bonjour ! Posez-moi toutes vos questions sur votre séjour — arrivée, WiFi, équipements de la villa, ou recommandations locales.", suggestions: ["Mot de passe WiFi ?", "Quelle est l'heure de départ ?", "Restaurants à proximité ?"], placeholder: "Écrivez votre question…", notFound: "Ce lien de villa n'existe plus." },
-    id: { sub: "Concierge virtual · tersedia 24/7", welcome: "Hai! Tanyakan apa saja tentang penginapan Anda — check-in, WiFi, peralatan vila, atau rekomendasi lokal.", suggestions: ["Kata sandi WiFi?", "Jam berapa check-out?", "Restoran terdekat?"], placeholder: "Ketik pertanyaan Anda…", notFound: "Tautan vila ini sudah tidak ada." },
-    es: { sub: "Conserje virtual · disponible 24/7", welcome: "¡Hola! Pregúntame lo que quieras sobre tu estancia: check-in, WiFi, equipamiento de la villa o recomendaciones locales.", suggestions: ["¿Contraseña WiFi?", "¿Hora de salida?", "¿Restaurantes cercanos?"], placeholder: "Escribe tu pregunta…", notFound: "Este enlace de villa ya no existe." },
-    de: { sub: "Virtueller Concierge · rund um die Uhr verfügbar", welcome: "Hallo! Fragen Sie mich alles zu Ihrem Aufenthalt — Check-in, WLAN, Ausstattung der Villa oder Empfehlungen vor Ort.", suggestions: ["WLAN-Passwort?", "Wann ist Check-out?", "Restaurants in der Nähe?"], placeholder: "Ihre Frage eingeben…", notFound: "Dieser Villa-Link existiert nicht mehr." },
-    it: { sub: "Concierge virtuale · disponibile 24/7", welcome: "Ciao! Chiedimi pure tutto sul tuo soggiorno — check-in, WiFi, dotazioni della villa o consigli locali.", suggestions: ["Password WiFi?", "A che ora il check-out?", "Ristoranti nelle vicinanze?"], placeholder: "Scrivi la tua domanda…", notFound: "Questo link della villa non esiste più." },
-    pt: { sub: "Concierge virtual · disponível 24 horas", welcome: "Olá! Pergunte-me qualquer coisa sobre a sua estadia — check-in, WiFi, equipamentos da vila ou recomendações locais.", suggestions: ["Senha do WiFi?", "Que horas é o check-out?", "Restaurantes por perto?"], placeholder: "Digite sua pergunta…", notFound: "Este link da vila não existe mais." },
-    nl: { sub: "Virtuele concierge · 24/7 beschikbaar", welcome: "Hoi! Vraag me gerust alles over je verblijf — inchecken, WiFi, voorzieningen van de villa of lokale tips.", suggestions: ["WiFi-wachtwoord?", "Hoe laat is uitchecken?", "Restaurants in de buurt?"], placeholder: "Typ je vraag…", notFound: "Deze villalink bestaat niet meer." },
-    zh: { sub: "虚拟礼宾 · 24小时在线", welcome: "您好！关于入住时间、WiFi、别墅设施或当地推荐，欢迎随时向我提问。", suggestions: ["WiFi密码是多少？", "退房时间是几点？", "附近有什么餐厅？"], placeholder: "输入您的问题…", notFound: "此别墅链接已失效。" },
-    ja: { sub: "バーチャルコンシェルジュ・24時間対応", welcome: "こんにちは！チェックイン、WiFi、ヴィラの設備、周辺のおすすめなど、滞在に関することは何でもお尋ねください。", suggestions: ["WiFiのパスワードは？", "チェックアウトの時間は？", "近くのレストランは？"], placeholder: "質問を入力…", notFound: "このヴィラのリンクは無効になりました。" },
-    ko: { sub: "가상 컨시어지 · 24시간 이용 가능", welcome: "안녕하세요! 체크인, 와이파이, 빌라 시설, 주변 추천 등 궁금한 점을 무엇이든 물어보세요.", suggestions: ["와이파이 비밀번호는?", "체크아웃 시간은?", "근처 식당 추천?"], placeholder: "질문을 입력하세요…", notFound: "이 빌라 링크는 더 이상 존재하지 않습니다." },
-    ru: { sub: "Виртуальный консьерж · доступен 24/7", welcome: "Здравствуйте! Спрашивайте что угодно о вашем пребывании — заезд, WiFi, оснащение виллы или местные рекомендации.", suggestions: ["Пароль от WiFi?", "Во сколько выезд?", "Рестораны поблизости?"], placeholder: "Введите ваш вопрос…", notFound: "Эта ссылка на виллу больше не существует." }
+    en: { sub: "Virtual concierge · available 24/7", welcome: "Hi! Ask me anything about your stay — check-in, WiFi, the villa's equipment, or local recommendations.", suggestions: ["WiFi password?", "What time is check-out?", "Nearby restaurants?"], placeholder: "Type your question…", notFound: "This villa link doesn't exist anymore.", roleGuest: "Guest", roleConcierge: "Virtual concierge · instant reply", roleConciergeForwarded: "Virtual concierge · question forwarded", roleManager: "Manager" },
+    fr: { sub: "Concierge virtuel · disponible 24h/24", welcome: "Bonjour ! Posez-moi toutes vos questions sur votre séjour — arrivée, WiFi, équipements de la villa, ou recommandations locales.", suggestions: ["Mot de passe WiFi ?", "Quelle est l'heure de départ ?", "Restaurants à proximité ?"], placeholder: "Écrivez votre question…", notFound: "Ce lien de villa n'existe plus.", roleGuest: "Invité", roleConcierge: "Concierge virtuel · réponse immédiate", roleConciergeForwarded: "Concierge virtuel · question transmise", roleManager: "Manager" },
+    id: { sub: "Concierge virtual · tersedia 24/7", welcome: "Hai! Tanyakan apa saja tentang penginapan Anda — check-in, WiFi, peralatan vila, atau rekomendasi lokal.", suggestions: ["Kata sandi WiFi?", "Jam berapa check-out?", "Restoran terdekat?"], placeholder: "Ketik pertanyaan Anda…", notFound: "Tautan vila ini sudah tidak ada.", roleGuest: "Tamu", roleConcierge: "Concierge virtual · balasan instan", roleConciergeForwarded: "Concierge virtual · pertanyaan diteruskan", roleManager: "Manajer" },
+    es: { sub: "Conserje virtual · disponible 24/7", welcome: "¡Hola! Pregúntame lo que quieras sobre tu estancia: check-in, WiFi, equipamiento de la villa o recomendaciones locales.", suggestions: ["¿Contraseña WiFi?", "¿Hora de salida?", "¿Restaurantes cercanos?"], placeholder: "Escribe tu pregunta…", notFound: "Este enlace de villa ya no existe.", roleGuest: "Huésped", roleConcierge: "Conserje virtual · respuesta instantánea", roleConciergeForwarded: "Conserje virtual · pregunta reenviada", roleManager: "Gerente" },
+    de: { sub: "Virtueller Concierge · rund um die Uhr verfügbar", welcome: "Hallo! Fragen Sie mich alles zu Ihrem Aufenthalt — Check-in, WLAN, Ausstattung der Villa oder Empfehlungen vor Ort.", suggestions: ["WLAN-Passwort?", "Wann ist Check-out?", "Restaurants in der Nähe?"], placeholder: "Ihre Frage eingeben…", notFound: "Dieser Villa-Link existiert nicht mehr.", roleGuest: "Gast", roleConcierge: "Virtueller Concierge · sofortige Antwort", roleConciergeForwarded: "Virtueller Concierge · Frage weitergeleitet", roleManager: "Manager" },
+    it: { sub: "Concierge virtuale · disponibile 24/7", welcome: "Ciao! Chiedimi pure tutto sul tuo soggiorno — check-in, WiFi, dotazioni della villa o consigli locali.", suggestions: ["Password WiFi?", "A che ora il check-out?", "Ristoranti nelle vicinanze?"], placeholder: "Scrivi la tua domanda…", notFound: "Questo link della villa non esiste più.", roleGuest: "Ospite", roleConcierge: "Concierge virtuale · risposta immediata", roleConciergeForwarded: "Concierge virtuale · domanda inoltrata", roleManager: "Responsabile" },
+    pt: { sub: "Concierge virtual · disponível 24 horas", welcome: "Olá! Pergunte-me qualquer coisa sobre a sua estadia — check-in, WiFi, equipamentos da vila ou recomendações locais.", suggestions: ["Senha do WiFi?", "Que horas é o check-out?", "Restaurantes por perto?"], placeholder: "Digite sua pergunta…", notFound: "Este link da vila não existe mais.", roleGuest: "Hóspede", roleConcierge: "Concierge virtual · resposta instantânea", roleConciergeForwarded: "Concierge virtual · pergunta encaminhada", roleManager: "Gerente" },
+    nl: { sub: "Virtuele concierge · 24/7 beschikbaar", welcome: "Hoi! Vraag me gerust alles over je verblijf — inchecken, WiFi, voorzieningen van de villa of lokale tips.", suggestions: ["WiFi-wachtwoord?", "Hoe laat is uitchecken?", "Restaurants in de buurt?"], placeholder: "Typ je vraag…", notFound: "Deze villalink bestaat niet meer.", roleGuest: "Gast", roleConcierge: "Virtuele concierge · direct antwoord", roleConciergeForwarded: "Virtuele concierge · vraag doorgestuurd", roleManager: "Manager" },
+    zh: { sub: "虚拟礼宾 · 24小时在线", welcome: "您好！关于入住时间、WiFi、别墅设施或当地推荐，欢迎随时向我提问。", suggestions: ["WiFi密码是多少？", "退房时间是几点？", "附近有什么餐厅？"], placeholder: "输入您的问题…", notFound: "此别墅链接已失效。", roleGuest: "客人", roleConcierge: "虚拟礼宾 · 即时回复", roleConciergeForwarded: "虚拟礼宾 · 问题已转交", roleManager: "管理员" },
+    ja: { sub: "バーチャルコンシェルジュ・24時間対応", welcome: "こんにちは！チェックイン、WiFi、ヴィラの設備、周辺のおすすめなど、滞在に関することは何でもお尋ねください。", suggestions: ["WiFiのパスワードは？", "チェックアウトの時間は？", "近くのレストランは？"], placeholder: "質問を入力…", notFound: "このヴィラのリンクは無効になりました。", roleGuest: "ゲスト", roleConcierge: "バーチャルコンシェルジュ・即時返信", roleConciergeForwarded: "バーチャルコンシェルジュ・質問転送済み", roleManager: "マネージャー" },
+    ko: { sub: "가상 컨시어지 · 24시간 이용 가능", welcome: "안녕하세요! 체크인, 와이파이, 빌라 시설, 주변 추천 등 궁금한 점을 무엇이든 물어보세요.", suggestions: ["와이파이 비밀번호는?", "체크아웃 시간은?", "근처 식당 추천?"], placeholder: "질문을 입력하세요…", notFound: "이 빌라 링크는 더 이상 존재하지 않습니다.", roleGuest: "투숙객", roleConcierge: "가상 컨시어지 · 즉시 답변", roleConciergeForwarded: "가상 컨시어지 · 질문 전달됨", roleManager: "매니저" },
+    ru: { sub: "Виртуальный консьерж · доступен 24/7", welcome: "Здравствуйте! Спрашивайте что угодно о вашем пребывании — заезд, WiFi, оснащение виллы или местные рекомендации.", suggestions: ["Пароль от WiFi?", "Во сколько выезд?", "Рестораны поблизости?"], placeholder: "Введите ваш вопрос…", notFound: "Эта ссылка на виллу больше не существует.", roleGuest: "Гость", roleConcierge: "Виртуальный консьерж · мгновенный ответ", roleConciergeForwarded: "Виртуальный консьерж · вопрос передан", roleManager: "Менеджер" }
   };
   function guestLangKey() {
     var raw = (getBrowserLocale() || "en").toLowerCase();
@@ -1463,10 +1467,11 @@
         messages.map(function (m, idx) {
           var escalated = m.role === "assistant" && m.answered === false;
           var roleIcon = m.role === "manager" ? e(IconCornerUpLeft, { size: 13 }) : m.role === "assistant" ? e(IconBell, { size: 13 }) : e(IconMessageSquare, { size: 13 });
+          var roleLabel = m.role === "manager" ? guestText("roleManager") : m.role === "assistant" ? (escalated ? guestText("roleConciergeForwarded") : guestText("roleConcierge")) : guestText("roleGuest");
           return e("div", { key: idx, className: "msg-row " + m.role },
             e("div", { className: "msg-icon " + m.role + (escalated ? " escalated" : "") }, roleIcon),
             e("div", { className: "msg-bubble " + m.role + (escalated ? " escalated" : "") },
-              m.role === "manager" ? e("span", { className: "msg-manager-label" }, "Reply from the owner") : null,
+              e("span", { className: "msg-role-label " + m.role + (escalated ? " escalated" : "") }, roleLabel),
               m.content
             )
           );
