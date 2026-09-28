@@ -199,15 +199,13 @@
   .msg-row.user{ align-self:flex-end; flex-direction:row-reverse; }
   .msg-row.assistant, .msg-row.manager{ align-self:flex-start; }
   .msg-icon{ width:24px; height:24px; border-radius:7px; display:flex; align-items:center; justify-content:center; flex-shrink:0; margin-bottom:1px; }
-  .msg-icon.user{ background:var(--surface-2); color:var(--ink-soft); }
-  .msg-icon.assistant{ background:var(--accent); color:var(--accent-contrast); }
+  .msg-icon.user{ background:var(--surface-2); color:var(--ink-dim); }
+  .msg-icon.assistant, .msg-icon.manager{ background:var(--accent); color:var(--accent-contrast); }
   .msg-icon.assistant.escalated{ background:var(--warn); color:var(--warn-soft); }
-  .msg-icon.manager{ background:var(--accent); color:var(--accent-contrast); }
   .msg-bubble{ min-width:0; padding:9px 13px; border-radius:14px; font-size:13.5px; line-height:1.45; white-space:pre-wrap; box-shadow:var(--shadow); }
   .msg-bubble.user{ background:var(--surface-2); color:var(--ink); border-bottom-right-radius:4px; }
-  .msg-bubble.assistant{ background:var(--accent); color:var(--accent-contrast); border-bottom-left-radius:4px; }
+  .msg-bubble.assistant, .msg-bubble.manager{ background:var(--accent-soft); color:var(--ink); border-bottom-left-radius:4px; }
   .msg-bubble.assistant.escalated{ background:var(--warn-soft); color:var(--ink); border-bottom-left-radius:4px; }
-  .msg-bubble.manager{ background:var(--accent-soft); color:var(--ink); border:1px solid var(--accent); border-bottom-left-radius:4px; }
   .msg-manager-label{ display:block; font-family:'IBM Plex Mono',monospace; font-size:10.5px; font-weight:500; text-transform:uppercase; letter-spacing:.06em; color:var(--accent); margin-bottom:3px; }
   .convo-thread .msg-row{ max-width:100%; }
   .convo-reply-form{ margin-top:10px; }
@@ -233,7 +231,6 @@
   .center-msg{ align-items:center; justify-content:center; text-align:center; gap:8px; font-size:15px; }
   .typing{ display:flex; gap:4px; padding:13px; }
   .typing .dot{ width:6px; height:6px; border-radius:50%; background:var(--ink-faint); display:inline-block; animation:bounce 1.2s infinite; }
-  .msg-bubble.assistant .typing .dot, .msg-bubble.assistant.typing .dot{ background:var(--accent-contrast); opacity:.7; }
   .typing .dot:nth-child(2){ animation-delay:.15s; }
   .typing .dot:nth-child(3){ animation-delay:.3s; }
   @keyframes bounce{ 0%,60%,100%{ transform:translateY(0); opacity:.5;} 30%{ transform:translateY(-4px); opacity:1;} }
