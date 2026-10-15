@@ -357,6 +357,10 @@
     margin-bottom: 3px;
   }
 
+  .demo-photo { margin-top: 8px; width: 104px; max-width: 100%; }
+  .demo-photo-img { display: block; width: 104px; height: 104px; border-radius: 10px; }
+  .demo-photo-caption { margin-top: 4px; font-size: 10.5px; color: var(--ink-faint); }
+
   .demo-step.auto .demo-icon,
   .demo-step.reply .demo-icon { background: var(--accent); color: var(--accent-ink); }
   .demo-step.auto .demo-bubble,
@@ -961,7 +965,7 @@
             </div>
             <div class="demo-bubble">
               <div class="who">Guest</div>
-              What time does the pool close tonight?
+              How do we turn on the air conditioning?
             </div>
           </div>
           <div class="demo-step auto" style="animation-delay:.75s">
@@ -970,7 +974,19 @@
             </div>
             <div class="demo-bubble">
               <div class="who">Virtual concierge · instant reply</div>
-              It's open until 10pm, the lights switch off automatically after that 🌙
+              The remote's on the nightstand — press ON, then set the temperature with the arrows.
+              <div class="demo-photo">
+                <svg class="demo-photo-img" viewBox="0 0 100 100" role="img" aria-label="Photo of the air conditioning remote on the nightstand">
+                  <rect x="0" y="0" width="100" height="100" rx="14" fill="var(--surface-2)"/>
+                  <rect x="34" y="16" width="32" height="68" rx="9" fill="var(--surface)" stroke="var(--ink-faint)" stroke-width="2"/>
+                  <circle cx="50" cy="29" r="6" fill="none" stroke="var(--accent)" stroke-width="2"/>
+                  <line x1="50" y1="24" x2="50" y2="29" stroke="var(--accent)" stroke-width="2" stroke-linecap="round"/>
+                  <text x="50" y="57" text-anchor="middle" font-family="'IBM Plex Mono', monospace" font-size="12" font-weight="600" fill="var(--ink)">22°</text>
+                  <path d="M44 68 L50 63 L56 68" fill="none" stroke="var(--ink-soft)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                  <path d="M44 76 L50 81 L56 76" fill="none" stroke="var(--ink-soft)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+                <div class="demo-photo-caption">AC remote — nightstand</div>
+              </div>
             </div>
           </div>
           <div class="demo-step" style="animation-delay:1.45s">
