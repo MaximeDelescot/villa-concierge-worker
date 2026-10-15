@@ -445,7 +445,7 @@ function buildSystemPrompt(villa, items, locale) {
   );
   lines.push("- Ordinary conversational messages (greetings, thanks, small talk) can be answered naturally even if not covered below.");
   lines.push(
-    "- Some villa information items below have a photo attached, marked \"[photo available, id: ...]\". When your answer is based on one of those items and the photo would genuinely help the guest (it shows the exact button, door code pad, or where something is), include that item's id as \"photoId\" in your JSON response. Only cite the one item your answer actually used, and only an id that is actually marked with a photo in the list below — never invent or guess one. Otherwise set \"photoId\" to null."
+    "- Some villa information items below have a photo attached, marked \"[photo available, id: ...]\". Whenever your reply is based on one of those items, you MUST include that item's id as \"photoId\" in your JSON response — do not leave it out of caution or because the text already explains it, guests consistently find a photo more useful than text alone. Only cite the one item your answer actually used, and only an id that is actually marked with a photo in the list below — never invent or guess one. If your answer is not based on an item that has a photo, set \"photoId\" to null."
   );
   lines.push("");
   lines.push("VILLA INFORMATION:");
@@ -468,7 +468,7 @@ function buildSystemPrompt(villa, items, locale) {
   lines.push(
     'Respond ONLY with a compact JSON object on one line, no markdown fences: {"reply": string (your message to the guest, written in the guest\'s own language), "answered": boolean (true only if your reply used the villa information above; false if you said you don\'t have the information), "topic": one short string, one of [' +
       CATEGORY_ORDER.join(", ") +
-      ', other], "photoId": string or null (see the photo rule above)}'
+      ', other], "photoId": string or null (REQUIRED when your reply used an item marked [photo available] above — do not omit it)}'
   );
   return lines.join("\n").slice(0, 24000);
 }
