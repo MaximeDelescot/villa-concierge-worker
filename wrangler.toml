@@ -11,6 +11,10 @@ binding = "DB"
 database_name = "villa_concierge_db"
 database_id = "151e550a-f578-4b56-a3b7-0756320f2c9f"
 
+[[r2_buckets]]
+binding = "PHOTOS"
+bucket_name = "villa-concierge-photos"
+
 [[routes]]
 pattern = "villa-concierge.com"
 custom_domain = true

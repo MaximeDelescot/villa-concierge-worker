@@ -24,6 +24,9 @@
 //     POST   /api/villas/:id/knowledge          { category, title, content, fields, photo }
 //     PATCH  /api/villas/:id/knowledge/:itemId  { title, content, fields, photo }
 //     DELETE /api/villas/:id/knowledge/:itemId
+//     POST   /api/villas/:id/knowledge/photo    <raw image bytes>  -> { url }
+//            Uploads a photo to R2; `photo` on the item is then set to
+//            the returned url. GET /img/:key (public) serves it back.
 //     GET    /api/villas/:id/conversations
 //     PATCH  /api/villas/:id/conversations/:cid { handled }
 //     POST   /api/villas/:id/conversations/:cid/reply { message } — owner
@@ -579,6 +582,40 @@ async function deleteKnowledge(env, villaId, itemId) {
   return json({ ok: true });
 }
 
+// ---------------------------------------------------------------------
+// Knowledge-item photos — stored in R2 (the `PHOTOS` bucket), not inlined
+// as base64 in D1. addKnowledge/updateKnowledge still just store whatever
+// string is in `photo` (a /img/... URL for new uploads, or a legacy
+// base64 data URL for items saved before this change — both render fine
+// as an <img src>, so no migration of old rows is needed).
+// ---------------------------------------------------------------------
+const MAX_PHOTO_BYTES = 5 * 1024 * 1024; // sanity cap; the client compresses well below this
+
+async function uploadKnowledgePhoto(env, villaId, request) {
+  if (!env.PHOTOS) return err(500, "photo storage is not configured");
+  const contentType = (request.headers.get("content-type") || "").split(";")[0].trim();
+  if (!contentType.startsWith("image/")) return err(400, "expected an image body");
+  const buf = await request.arrayBuffer();
+  if (!buf.byteLength) return err(400, "empty body");
+  if (buf.byteLength > MAX_PHOTO_BYTES) return err(413, "image too large");
+  const ext = contentType === "image/png" ? "png" : contentType === "image/webp" ? "webp" : "jpg";
+  const key = villaId + "/" + newId("kbphoto") + "." + ext;
+  await env.PHOTOS.put(key, buf, { httpMetadata: { contentType } });
+  return json({ url: "/img/" + key }, 201);
+}
+
+async function serveKnowledgePhoto(env, key) {
+  if (!env.PHOTOS || !key) return err(404, "not found");
+  const obj = await env.PHOTOS.get(key);
+  if (!obj) return err(404, "not found");
+  return new Response(obj.body, {
+    headers: {
+      "content-type": (obj.httpMetadata && obj.httpMetadata.contentType) || "application/octet-stream",
+      "cache-control": "public, max-age=31536000, immutable",
+    },
+  });
+}
+
 async function listConversations(env, villaId, request) {
   const { results } = await env.DB.prepare(
     "SELECT * FROM conversations WHERE villa_id = ? ORDER BY updated_at DESC LIMIT 200"
@@ -990,6 +1027,11 @@ export default {
       return Response.redirect(dest, 302);
     }
 
+    // Knowledge-item photos stored in R2, served under /img/<key>.
+    if (path.indexOf("/img/") === 0) {
+      return await serveKnowledgePhoto(env, path.slice(5));
+    }
+
     if (!path.startsWith("/api/")) {
       return env.ASSETS.fetch(request);
     }
@@ -1075,6 +1117,9 @@ export default {
           const owns = await loadVillaForManager(env, villaId, auth.manager);
           if (owns.errorResponse) return owns.errorResponse;
           const itemId = parts[4];
+          if (itemId === "photo" && request.method === "POST") {
+            return await uploadKnowledgePhoto(env, villaId, request);
+          }
           if (!itemId) {
             if (request.method === "GET") return await listKnowledge(env, villaId);
             if (request.method === "POST") return await addKnowledge(env, villaId, await readJson(request));

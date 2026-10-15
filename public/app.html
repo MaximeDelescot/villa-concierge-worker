@@ -435,8 +435,9 @@
           canvas.width = w; canvas.height = h;
           var ctx = canvas.getContext("2d");
           ctx.drawImage(img, 0, 0, w, h);
-          try { resolve(canvas.toDataURL("image/jpeg", quality)); }
-          catch (err) { reject(err); }
+          canvas.toBlob(function (blob) {
+            if (blob) resolve(blob); else reject(new Error("toBlob failed"));
+          }, "image/jpeg", quality);
         };
         img.onerror = reject;
         img.src = reader.result;
@@ -507,6 +508,22 @@
     addKnowledge: function (villaId, data) { return apiFetch("/villas/" + villaId + "/knowledge", { method: "POST", body: data }); },
     updateKnowledge: function (villaId, itemId, patch) { return apiFetch("/villas/" + villaId + "/knowledge/" + itemId, { method: "PATCH", body: patch }); },
     deleteKnowledge: function (villaId, itemId) { return apiFetch("/villas/" + villaId + "/knowledge/" + itemId, { method: "DELETE" }); },
+    uploadKnowledgePhoto: function (villaId, blob) {
+      var headers = { "content-type": blob.type || "image/jpeg" };
+      var token = getToken();
+      if (token) headers["authorization"] = "Bearer " + token;
+      return fetch("/api/villas/" + villaId + "/knowledge/photo", { method: "POST", headers: headers, body: blob })
+        .then(function (res) {
+          return res.json().catch(function () { return {}; }).then(function (data) {
+            if (!res.ok) {
+              var e2 = new Error((data && data.error) || ("HTTP " + res.status));
+              e2.status = res.status;
+              throw e2;
+            }
+            return data;
+          });
+        });
+    },
     listConversations: function (villaId) { return apiFetch("/villas/" + villaId + "/conversations"); },
     setConversationHandled: function (villaId, convoId, handled) { return apiFetch("/villas/" + villaId + "/conversations/" + convoId, { method: "PATCH", body: { handled: handled } }); },
     sendManagerReply: function (villaId, convoId, message) { return apiFetch("/villas/" + villaId + "/conversations/" + convoId + "/reply", { method: "POST", body: { message: message } }); },
@@ -933,6 +950,7 @@
     var s3 = useState(initial && initial.photo ? initial.photo : null); var photo = s3[0], setPhoto = s3[1];
     var s4 = useState(false); var busy = s4[0], setBusy = s4[1];
     var s5 = useState(""); var error = s5[0], setError = s5[1];
+    var s6 = useState(false); var uploading = s6[0], setUploading = s6[1];
 
     function setField(key, val) {
       setValues(function (prev) { var next = Object.assign({}, prev); next[key] = val; return next; });
@@ -941,14 +959,18 @@
     function handleFile(ev) {
       var file = ev.target.files && ev.target.files[0];
       if (!file) return;
-      setError("");
-      compressImage(file, 480, 0.6).then(function (dataUrl) {
-        if (dataUrl.length > 180000) return compressImage(file, 320, 0.45);
-        return dataUrl;
-      }).then(function (dataUrl) {
-        if (dataUrl.length > 180000) { setError("Image too large even after compression — try a simpler photo."); return; }
-        setPhoto(dataUrl);
-      }).catch(function () { setError("Couldn't load this image."); });
+      setError(""); setUploading(true);
+      compressImage(file, 1024, 0.75).then(function (blob) {
+        return blob.size > 1500000 ? compressImage(file, 640, 0.6) : blob;
+      }).then(function (blob) {
+        return api.uploadKnowledgePhoto(villaId, blob);
+      }).then(function (res) {
+        setPhoto(res.url);
+        setUploading(false);
+      }).catch(function () {
+        setUploading(false);
+        setError("Couldn't upload this image.");
+      });
     }
 
     function handleSave(ev) {
@@ -972,14 +994,15 @@
       e(Field, { label: "Photo (optional)" },
         e("div", { className: "row gap" },
           photo ? e("img", { className: "kb-photo-preview", src: photo }) : null,
-          e("input", { type: "file", accept: "image/*", onChange: handleFile }),
-          photo ? e("button", { type: "button", className: "link-danger", onClick: function () { setPhoto(null); } }, "Remove") : null
+          e("input", { type: "file", accept: "image/*", onChange: handleFile, disabled: uploading }),
+          uploading ? e("span", { className: "muted" }, "Uploading…") : null,
+          (photo && !uploading) ? e("button", { type: "button", className: "link-danger", onClick: function () { setPhoto(null); } }, "Remove") : null
         )
       ),
       error ? e("p", { className: "error-text" }, error) : null,
       e("div", { className: "row gap end" },
         e(Button, { type: "button", variant: "ghost", onClick: props.onCancel }, "Cancel"),
-        e(Button, { type: "submit", disabled: busy }, busy ? "Saving..." : "Save")
+        e(Button, { type: "submit", disabled: busy || uploading }, busy ? "Saving..." : "Save")
       )
     );
   }
