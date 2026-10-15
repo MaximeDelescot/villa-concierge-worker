@@ -158,13 +158,19 @@
   .cat-chevron{ color:var(--ink-faint); font-size:12px; }
   .cat-body{ padding:0 16px 16px; display:flex; flex-direction:column; gap:10px; border-top:1px solid var(--border); padding-top:12px; }
   .kb-item{ display:flex; gap:10px; align-items:flex-start; background:var(--surface-2); border-radius:10px; padding:10px 12px; }
-  .kb-item-photo{ width:44px; height:44px; object-fit:cover; border-radius:8px; flex-shrink:0; }
+  .kb-item-photo-wrap{ position:relative; flex-shrink:0; }
+  .kb-item-photo{ width:44px; height:44px; object-fit:cover; border-radius:8px; flex-shrink:0; display:block; }
+  .kb-item-photo-count{ position:absolute; bottom:-4px; right:-4px; background:var(--accent); color:var(--accent-contrast); font-size:9.5px; font-weight:700; padding:1px 5px; border-radius:8px; line-height:1.4; box-shadow:var(--shadow); }
   .kb-item-body{ flex:1; min-width:0; }
   .kb-item-title{ font-weight:600; font-size:13.5px; }
   .kb-item-content{ color:var(--ink-dim); font-size:13px; margin-top:2px; white-space:pre-wrap; }
   .kb-item-actions{ display:flex; gap:2px; flex-shrink:0; }
   .kb-form{ display:flex; flex-direction:column; gap:12px; background:var(--surface-2); padding:14px; border-radius:10px; }
-  .kb-photo-preview{ width:52px; height:52px; object-fit:cover; border-radius:8px; }
+  .kb-photo-preview{ width:52px; height:52px; object-fit:cover; border-radius:8px; flex-shrink:0; }
+  .kb-photos-editor{ display:flex; flex-direction:column; gap:8px; }
+  .kb-photo-edit-row{ display:flex; align-items:center; gap:8px; }
+  .kb-photo-edit-row .input{ flex:1; min-width:0; }
+  .kb-photos-hint{ color:var(--ink-faint); font-size:12px; }
   .error-text{ color:var(--danger); font-size:12.5px; }
   .error-text.center{ text-align:center; }
 
@@ -211,7 +217,10 @@
   .msg-icon.assistant, .msg-icon.manager{ background:var(--accent); color:var(--accent-contrast); }
   .msg-icon.assistant.escalated{ background:var(--warn); color:var(--warn-soft); }
   .msg-bubble{ min-width:0; padding:9px 13px; border-radius:14px; font-size:13.5px; line-height:1.45; white-space:pre-wrap; box-shadow:var(--shadow); }
-  .msg-photo{ display:block; max-width:220px; width:100%; border-radius:10px; margin-top:8px; }
+  .msg-photos{ display:flex; flex-wrap:wrap; gap:8px; margin-top:8px; }
+  .msg-photo-item{ width:130px; max-width:100%; }
+  .msg-photo{ display:block; width:100%; aspect-ratio:1/1; object-fit:cover; border-radius:10px; }
+  .msg-photo-caption{ margin-top:4px; font-size:11px; line-height:1.3; color:var(--ink-faint); }
   .msg-bubble.user{ background:var(--surface-2); color:var(--ink); border-bottom-right-radius:4px; }
   .msg-bubble.assistant, .msg-bubble.manager{ background:var(--accent-soft); color:var(--ink); border-bottom-left-radius:4px; }
   .msg-bubble.assistant.escalated{ background:var(--warn-soft); color:var(--ink); border-bottom-left-radius:4px; }
@@ -462,6 +471,23 @@
       reader.onerror = reject;
       reader.readAsDataURL(file);
     });
+  }
+
+  var MAX_KB_PHOTOS = 4;
+
+  // Shared by the guest chat and the manager's conversation thread: renders
+  // the (optional) photos attached to a chat message, each with its
+  // (optional) caption underneath.
+  function renderMsgPhotos(photos) {
+    if (!photos || !photos.length) return null;
+    return e("div", { className: "msg-photos" },
+      photos.map(function (p, i) {
+        return e("div", { className: "msg-photo-item", key: i },
+          e("img", { className: "msg-photo", src: p.url, alt: p.caption || "" }),
+          p.caption ? e("div", { className: "msg-photo-caption" }, p.caption) : null
+        );
+      })
+    );
   }
 
   function getOrCreateSessionId(villaId) {
@@ -1057,7 +1083,11 @@
     var villaId = props.villaId, category = props.category, initial = props.initial;
     var tmpl = templateForCategory(category);
     var s1 = useState(function () { return initialValuesFor(tmpl, initial); }); var values = s1[0], setValues = s1[1];
-    var s3 = useState(initial && initial.photo ? initial.photo : null); var photo = s3[0], setPhoto = s3[1];
+    var s3 = useState(function () {
+      return (initial && Array.isArray(initial.photos))
+        ? initial.photos.slice(0, MAX_KB_PHOTOS).map(function (p) { return { url: p.url, caption: p.caption || "" }; })
+        : [];
+    }); var photos = s3[0], setPhotos = s3[1];
     var s4 = useState(false); var busy = s4[0], setBusy = s4[1];
     var s5 = useState(""); var error = s5[0], setError = s5[1];
     var s6 = useState(false); var uploading = s6[0], setUploading = s6[1];
@@ -1066,21 +1096,30 @@
       setValues(function (prev) { var next = Object.assign({}, prev); next[key] = val; return next; });
     }
 
-    function handleFile(ev) {
+    function handleAddFile(ev) {
       var file = ev.target.files && ev.target.files[0];
-      if (!file) return;
+      ev.target.value = "";
+      if (!file || photos.length >= MAX_KB_PHOTOS) return;
       setError(""); setUploading(true);
       compressImage(file, 1024, 0.75).then(function (blob) {
         return blob.size > 1500000 ? compressImage(file, 640, 0.6) : blob;
       }).then(function (blob) {
         return api.uploadKnowledgePhoto(villaId, blob);
       }).then(function (res) {
-        setPhoto(res.url);
+        setPhotos(function (prev) { return prev.concat([{ url: res.url, caption: "" }]); });
         setUploading(false);
       }).catch(function () {
         setUploading(false);
         setError("Couldn't upload this image.");
       });
+    }
+
+    function removePhoto(idx) {
+      setPhotos(function (prev) { return prev.filter(function (_, i) { return i !== idx; }); });
+    }
+
+    function setPhotoCaption(idx, val) {
+      setPhotos(function (prev) { return prev.map(function (p, i) { return i === idx ? Object.assign({}, p, { caption: val }) : p; }); });
     }
 
     function handleSave(ev) {
@@ -1090,7 +1129,8 @@
       var anyFilled = tmpl.fields.some(function (f) { return trimmed[f.key]; });
       if (!anyFilled) { setError("Please fill in at least one field."); return; }
       setBusy(true); setError("");
-      var payload = Object.assign(materializeFields(category, trimmed), { photo: photo || null, fields: trimmed });
+      var photosPayload = photos.map(function (p) { return { url: p.url, caption: (p.caption || "").trim() || null }; });
+      var payload = Object.assign(materializeFields(category, trimmed), { photos: photosPayload, fields: trimmed });
       var task = initial
         ? api.updateKnowledge(villaId, initial.id, payload)
         : api.addKnowledge(villaId, Object.assign({ category: category, order: Date.now() }, payload));
@@ -1101,12 +1141,24 @@
       tmpl.fields.map(function (f, idx) {
         return e(TemplateField, { key: f.key, field: f, value: values[f.key] || "", autoFocus: idx === 0, onChange: function (val) { setField(f.key, val); } });
       }),
-      e(Field, { label: "Photo (optional)" },
-        e("div", { className: "row gap" },
-          photo ? e("img", { className: "kb-photo-preview", src: photo }) : null,
-          e("input", { type: "file", accept: "image/*", onChange: handleFile, disabled: uploading }),
-          uploading ? e("span", { className: "muted" }, "Uploading…") : null,
-          (photo && !uploading) ? e("button", { type: "button", className: "link-danger", onClick: function () { setPhoto(null); } }, "Remove") : null
+      e(Field, { label: "Photos (optional, up to " + MAX_KB_PHOTOS + ")" },
+        e("div", { className: "kb-photos-editor" },
+          photos.map(function (p, idx) {
+            return e("div", { className: "kb-photo-edit-row", key: idx },
+              e("img", { className: "kb-photo-preview", src: p.url }),
+              e("input", {
+                className: "input", placeholder: "Caption (optional)", value: p.caption || "",
+                onChange: function (ev) { setPhotoCaption(idx, ev.target.value); }
+              }),
+              e("button", { type: "button", className: "link-danger", onClick: function () { removePhoto(idx); } }, "Remove")
+            );
+          }),
+          photos.length < MAX_KB_PHOTOS
+            ? e("div", { className: "row gap" },
+                e("input", { type: "file", accept: "image/*", onChange: handleAddFile, disabled: uploading }),
+                uploading ? e("span", { className: "muted" }, "Uploading…") : null
+              )
+            : e("div", { className: "kb-photos-hint" }, "Maximum of " + MAX_KB_PHOTOS + " photos reached.")
         )
       ),
       error ? e("p", { className: "error-text" }, error) : null,
@@ -1127,7 +1179,10 @@
       });
     }
     return e("div", { className: "kb-item" },
-      item.photo ? e("img", { className: "kb-item-photo", src: item.photo, alt: "" }) : null,
+      (item.photos && item.photos.length) ? e("div", { className: "kb-item-photo-wrap" },
+        e("img", { className: "kb-item-photo", src: item.photos[0].url, alt: "" }),
+        item.photos.length > 1 ? e("span", { className: "kb-item-photo-count" }, "+" + (item.photos.length - 1)) : null
+      ) : null,
       e("div", { className: "kb-item-body" },
         e("div", { className: "kb-item-title" }, item.title),
         e("div", { className: "kb-item-content" }, item.content)
@@ -1300,7 +1355,7 @@
             e("div", { className: "msg-bubble " + m.role + (escalated ? " escalated" : "") },
               e("span", { className: "msg-role-label " + m.role + (escalated ? " escalated" : "") }, roleLabel),
               m.content,
-              m.photo ? e("img", { className: "msg-photo", src: m.photo, alt: "" }) : null
+              renderMsgPhotos(m.photos)
             )
           );
         }),
@@ -1575,7 +1630,7 @@
       setSending(true);
 
       api.chat(villaId, sessionId, trimmed, getBrowserLocale()).then(function (result) {
-        var assistantMsg = { role: "assistant", content: result.reply, ts: nowIso(), answered: result.answered, topic: result.topic, photo: result.photo || null };
+        var assistantMsg = { role: "assistant", content: result.reply, ts: nowIso(), answered: result.answered, topic: result.topic, photos: result.photos || null };
         setMessages(optimistic.concat([assistantMsg]));
         setSending(false);
       }).catch(function (httpErr) {
@@ -1607,7 +1662,7 @@
             e("div", { className: "msg-bubble " + m.role + (escalated ? " escalated" : "") },
               e("span", { className: "msg-role-label " + m.role + (escalated ? " escalated" : "") }, roleLabel),
               m.content,
-              m.photo ? e("img", { className: "msg-photo", src: m.photo, alt: "" }) : null
+              renderMsgPhotos(m.photos)
             )
           );
         }),

@@ -23,12 +23,13 @@
 //     PATCH  /api/villas/:id                    { name }
 //     DELETE /api/villas/:id
 //     GET    /api/villas/:id/knowledge
-//     POST   /api/villas/:id/knowledge          { category, title, content, fields, photo }
-//     PATCH  /api/villas/:id/knowledge/:itemId  { title, content, fields, photo }
+//     POST   /api/villas/:id/knowledge          { category, title, content, fields, photos }
+//     PATCH  /api/villas/:id/knowledge/:itemId  { title, content, fields, photos }
 //     DELETE /api/villas/:id/knowledge/:itemId
 //     POST   /api/villas/:id/knowledge/photo    <raw image bytes>  -> { url }
-//            Uploads a photo to R2; `photo` on the item is then set to
-//            the returned url. GET /img/:key (public) serves it back.
+//            Uploads one photo to R2. `photos` on the item is an array of
+//            up to 4 { url, caption } objects built from these URLs.
+//            GET /img/:key (public) serves an uploaded photo back.
 //     GET    /api/villas/:id/conversations
 //     PATCH  /api/villas/:id/conversations/:cid { handled }
 //     POST   /api/villas/:id/conversations/:cid/reply { message } — owner
@@ -445,7 +446,7 @@ function buildSystemPrompt(villa, items, locale) {
   );
   lines.push("- Ordinary conversational messages (greetings, thanks, small talk) can be answered naturally even if not covered below.");
   lines.push(
-    "- Some villa information items below have a photo attached, marked \"[photo available, id: ...]\". Whenever your reply is based on one of those items, you MUST include that item's id as \"photoId\" in your JSON response — do not leave it out of caution or because the text already explains it, guests consistently find a photo more useful than text alone. Only cite the one item your answer actually used, and only an id that is actually marked with a photo in the list below — never invent or guess one. If your answer is not based on an item that has a photo, set \"photoId\" to null."
+    "- Some villa information items below have one or more photos attached, marked \"[photo available, id: ...]\". Whenever your reply is based on one of those items, you MUST include that item's id as \"photoId\" in your JSON response — do not leave it out of caution or because the text already explains it, guests consistently find a photo more useful than text alone. Only cite the one item your answer actually used, and only an id that is actually marked with a photo in the list below — never invent or guess one. If your answer is not based on an item that has a photo, set \"photoId\" to null."
   );
   lines.push("");
   lines.push("VILLA INFORMATION:");
@@ -459,7 +460,7 @@ function buildSystemPrompt(villa, items, locale) {
     for (const it of list) {
       const title = String(it.title || "").slice(0, 200);
       const content = String(it.content || "").slice(0, 1200);
-      const photoNote = it.photo ? "  [photo available, id: " + it.id + "]" : "";
+      const photoNote = it.photos && it.photos.length ? "  [photo available, id: " + it.id + "]" : "";
       lines.push("- " + title + ": " + content + photoNote);
     }
   }
@@ -700,7 +701,7 @@ function rowToKnowledge(r) {
     title: r.title,
     content: r.content,
     fields,
-    photo: r.photo || null,
+    photos: parsePhotos(r.photos_json),
     order: r.item_order,
     createdAt: r.created_at,
   };
@@ -709,8 +710,9 @@ function rowToKnowledge(r) {
 async function addKnowledge(env, villaId, body) {
   const id = newId("kb");
   const ts = nowIso();
+  const photos = sanitizePhotos(body.photos);
   await env.DB.prepare(
-    "INSERT INTO knowledge_items (id, villa_id, category, title, content, fields_json, photo, item_order, created_at) VALUES (?,?,?,?,?,?,?,?,?)"
+    "INSERT INTO knowledge_items (id, villa_id, category, title, content, fields_json, photos_json, item_order, created_at) VALUES (?,?,?,?,?,?,?,?,?)"
   )
     .bind(
       id,
@@ -719,7 +721,7 @@ async function addKnowledge(env, villaId, body) {
       body.title || "(sans titre)",
       body.content || "",
       JSON.stringify(body.fields || {}),
-      body.photo || null,
+      JSON.stringify(photos),
       typeof body.order === "number" ? body.order : Date.now(),
       ts
     )
@@ -728,46 +730,94 @@ async function addKnowledge(env, villaId, body) {
 }
 
 async function updateKnowledge(env, villaId, itemId, body) {
-  const existing = await env.DB.prepare("SELECT photo FROM knowledge_items WHERE id = ? AND villa_id = ?")
+  const existing = await env.DB.prepare("SELECT photos_json FROM knowledge_items WHERE id = ? AND villa_id = ?")
     .bind(itemId, villaId)
     .first();
-  const newPhoto = body.photo || null;
+  const newPhotos = sanitizePhotos(body.photos);
   const res = await env.DB.prepare(
-    "UPDATE knowledge_items SET title = ?, content = ?, fields_json = ?, photo = ? WHERE id = ? AND villa_id = ?"
+    "UPDATE knowledge_items SET title = ?, content = ?, fields_json = ?, photos_json = ? WHERE id = ? AND villa_id = ?"
   )
     .bind(
       body.title || "(sans titre)",
       body.content || "",
       JSON.stringify(body.fields || {}),
-      newPhoto,
+      JSON.stringify(newPhotos),
       itemId,
       villaId
     )
     .run();
   if (!res.meta.changes) return err(404, "item not found");
-  if (existing && existing.photo && existing.photo !== newPhoto) {
-    await deletePhotoFromR2(env, existing.photo);
+  // Only the photos actually dropped from the item get cleaned up in R2 —
+  // photos that are still referenced (kept as-is, reordered, or just had
+  // their caption edited) must survive.
+  const oldPhotos = parsePhotos(existing && existing.photos_json);
+  const keptUrls = new Set(newPhotos.map((p) => p.url));
+  for (const p of oldPhotos) {
+    if (!keptUrls.has(p.url)) await deletePhotoFromR2(env, p.url);
   }
   return json({ ok: true });
 }
 
 async function deleteKnowledge(env, villaId, itemId) {
-  const existing = await env.DB.prepare("SELECT photo FROM knowledge_items WHERE id = ? AND villa_id = ?")
+  const existing = await env.DB.prepare("SELECT photos_json FROM knowledge_items WHERE id = ? AND villa_id = ?")
     .bind(itemId, villaId)
     .first();
   await env.DB.prepare("DELETE FROM knowledge_items WHERE id = ? AND villa_id = ?").bind(itemId, villaId).run();
-  if (existing && existing.photo) await deletePhotoFromR2(env, existing.photo);
+  const oldPhotos = parsePhotos(existing && existing.photos_json);
+  for (const p of oldPhotos) await deletePhotoFromR2(env, p.url);
   return json({ ok: true });
 }
 
 // ---------------------------------------------------------------------
 // Knowledge-item photos — stored in R2 (the `PHOTOS` bucket), not inlined
-// as base64 in D1. addKnowledge/updateKnowledge still just store whatever
-// string is in `photo` (a /img/... URL for new uploads, or a legacy
-// base64 data URL for items saved before this change — both render fine
-// as an <img src>, so no migration of old rows is needed).
+// as base64 in D1. Each knowledge item can have up to MAX_PHOTOS_PER_ITEM
+// photos, each a { url, caption } pair kept as JSON in `photos_json`.
+// `url` is a /img/... R2-backed URL for new uploads, or (for rows saved
+// before this feature existed) a legacy inline base64 data URL — both
+// render fine as an <img src>.
 // ---------------------------------------------------------------------
 const MAX_PHOTO_BYTES = 5 * 1024 * 1024; // sanity cap; the client compresses well below this
+const MAX_PHOTOS_PER_ITEM = 4;
+const MAX_PHOTO_CAPTION_LEN = 200;
+
+// Parses the `photos_json` column into a safe, bounded array of
+// { url, caption } objects — never trusts the stored JSON blindly, since
+// it round-trips through client input.
+function parsePhotos(raw) {
+  if (!raw) return [];
+  let arr;
+  try {
+    arr = JSON.parse(raw);
+  } catch (e) {
+    return [];
+  }
+  if (!Array.isArray(arr)) return [];
+  const out = [];
+  for (const p of arr) {
+    if (!p || typeof p.url !== "string" || !p.url) continue;
+    out.push({
+      url: p.url,
+      caption: typeof p.caption === "string" && p.caption ? p.caption.slice(0, MAX_PHOTO_CAPTION_LEN) : null,
+    });
+    if (out.length >= MAX_PHOTOS_PER_ITEM) break;
+  }
+  return out;
+}
+
+// Validates/bounds a `photos` array coming from the manager's request body
+// before it's stored — caps the count, requires a real url string on each
+// entry, and trims captions.
+function sanitizePhotos(input) {
+  if (!Array.isArray(input)) return [];
+  const out = [];
+  for (const p of input) {
+    if (!p || typeof p.url !== "string" || !p.url.trim()) continue;
+    const caption = typeof p.caption === "string" ? p.caption.trim() : "";
+    out.push({ url: p.url.trim().slice(0, 600), caption: caption ? caption.slice(0, MAX_PHOTO_CAPTION_LEN) : null });
+    if (out.length >= MAX_PHOTOS_PER_ITEM) break;
+  }
+  return out;
+}
 
 async function uploadKnowledgePhoto(env, villaId, request) {
   if (!env.PHOTOS) return err(500, "photo storage is not configured");
@@ -1133,11 +1183,18 @@ async function chat(env, villaId, body, baseUrl, request) {
   const villa = await env.DB.prepare("SELECT id, name, manager_id FROM villas WHERE id = ?").bind(villaId).first();
   if (!villa) return err(404, "villa not found");
 
-  const { results: items } = await env.DB.prepare(
-    "SELECT id, category, title, content, photo FROM knowledge_items WHERE villa_id = ? ORDER BY item_order ASC"
+  const { results: itemRows } = await env.DB.prepare(
+    "SELECT id, category, title, content, photos_json FROM knowledge_items WHERE villa_id = ? ORDER BY item_order ASC"
   )
     .bind(villaId)
     .all();
+  const items = itemRows.map((r) => ({
+    id: r.id,
+    category: r.category,
+    title: r.title,
+    content: r.content,
+    photos: parsePhotos(r.photos_json),
+  }));
 
   let convoRow = await env.DB.prepare(
     "SELECT * FROM conversations WHERE villa_id = ? AND session_id = ?"
@@ -1168,7 +1225,7 @@ async function chat(env, villaId, body, baseUrl, request) {
 
   const systemPrompt = buildSystemPrompt(villa, items, locale);
 
-  let reply, answered, topic, photoUrl;
+  let reply, answered, topic, photos;
   try {
     const raw = await askClaude(env, systemPrompt, turns);
     const result = parseLenientJson(raw);
@@ -1178,19 +1235,19 @@ async function chat(env, villaId, body, baseUrl, request) {
         : raw || "Sorry, I didn't quite catch that — could you rephrase?";
     answered = !!(result && result.answered);
     topic = (result && result.topic) || "other";
-    // Only trust a photoId that genuinely matches an item that has a photo
-    // — never take the model's word for a URL, and never show one for an
-    // unanswered message.
-    photoUrl = null;
+    // Only trust a photoId that genuinely matches an item that has photos
+    // — never take the model's word for a URL, and never show photos for
+    // an unanswered message.
+    photos = [];
     if (answered && result && result.photoId) {
-      const matchedItem = items.find((it) => it.id === result.photoId && it.photo);
-      if (matchedItem) photoUrl = matchedItem.photo;
+      const matchedItem = items.find((it) => it.id === result.photoId && it.photos && it.photos.length);
+      if (matchedItem) photos = matchedItem.photos;
     }
   } catch (e) {
     return err(e.code === "rate_limited" ? 429 : 502, e.message || "The concierge is unavailable right now.");
   }
 
-  const assistantMsg = { role: "assistant", content: reply, ts: nowIso(), answered, topic, photo: photoUrl || null };
+  const assistantMsg = { role: "assistant", content: reply, ts: nowIso(), answered, topic, photos: photos.length ? photos : null };
   const newMessages = messages.concat([userMsg, assistantMsg]);
   const ts = nowIso();
 
@@ -1220,7 +1277,7 @@ async function chat(env, villaId, body, baseUrl, request) {
     await notifyManagerUnanswered(env, villa, message, convoId, baseUrl);
   }
 
-  return json({ reply, answered, topic, photo: photoUrl || null });
+  return json({ reply, answered, topic, photos: photos.length ? photos : null });
 }
 
 // ---------------------------------------------------------------------
