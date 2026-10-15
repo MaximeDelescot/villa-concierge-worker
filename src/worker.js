@@ -15,6 +15,8 @@
 //   Manager (require Authorization: Bearer <session token> from signup/login).
 //   Each manager only sees/manages their own villas; the very first account
 //   ever created is an admin and can see every manager's villas:
+//     POST   /api/auth/forgot-password          { email } -> { ok } (always)
+//     POST   /api/auth/reset-password           { token, password } -> { token, manager }
 //     GET    /api/auth/me                       -> { manager }
 //     GET    /api/villas
 //     POST   /api/villas                       { name }
@@ -164,10 +166,15 @@ const DUMMY_PASSWORD_SALT = "a3f1c9d2b7e4f08f3c6a9d1e2b4f7c8a";
 // targeting.
 async function checkAuthRateLimit(env, request, kind) {
   const ip = (request && request.headers.get("CF-Connecting-IP")) || "unknown";
-  const burstLimit = kind === "signup" ? 5 : 15;
-  const dayLimit = kind === "signup" ? 20 : 100;
-  if (!(await bumpRateLimit(env, "ip:" + ip + ":" + kind + ":5m", 300, burstLimit))) return false;
-  if (!(await bumpRateLimit(env, "ip:" + ip + ":" + kind + ":day", 86400, dayLimit))) return false;
+  const limits = {
+    signup: { burst: 5, day: 20 },
+    login: { burst: 15, day: 100 },
+    reset: { burst: 5, day: 20 },
+    "reset-confirm": { burst: 10, day: 50 },
+  };
+  const l = limits[kind] || { burst: 15, day: 100 };
+  if (!(await bumpRateLimit(env, "ip:" + ip + ":" + kind + ":5m", 300, l.burst))) return false;
+  if (!(await bumpRateLimit(env, "ip:" + ip + ":" + kind + ":day", 86400, l.day))) return false;
   return true;
 }
 
@@ -255,6 +262,104 @@ async function logout(env, request) {
   const token = bearerToken(request);
   if (token) await env.DB.prepare("DELETE FROM sessions WHERE token = ?").bind(token).run();
   return json({ ok: true });
+}
+
+// ---------------------------------------------------------------------
+// Password reset — email a one-time link (reusing the Resend setup
+// already in place for manager alerts), valid for 1 hour.
+// ---------------------------------------------------------------------
+const RESET_TOKEN_TTL_MS = 60 * 60 * 1000;
+
+async function sendPasswordResetEmail(env, toEmail, resetUrl) {
+  if (!env.RESEND_API_KEY || !toEmail) return;
+  try {
+    await fetch("https://api.resend.com/emails", {
+      method: "POST",
+      headers: {
+        authorization: "Bearer " + env.RESEND_API_KEY,
+        "content-type": "application/json",
+      },
+      body: JSON.stringify({
+        from: env.RESEND_FROM || "Villa Concierge <onboarding@resend.dev>",
+        to: [toEmail],
+        subject: "Réinitialisation de votre mot de passe — Villa Concierge",
+        html:
+          "<p>Vous avez demandé à réinitialiser votre mot de passe.</p>" +
+          '<p><a href="' + resetUrl + '">Cliquez ici pour choisir un nouveau mot de passe</a></p>' +
+          "<p>Ce lien expire dans une heure. Si vous n'êtes pas à l'origine de cette demande, vous pouvez ignorer cet email.</p>",
+      }),
+    });
+  } catch (e) {
+    // Best-effort — never let an email failure break the request itself.
+  }
+}
+
+async function requestPasswordReset(env, body, request, baseUrl) {
+  if (!(await checkAuthRateLimit(env, request, "reset"))) {
+    return err(429, "Too many attempts — please try again in a few minutes.");
+  }
+  const email = String(body.email || "").trim().toLowerCase();
+  if (email) {
+    // Per-email throttle too, regardless of whether it has an account —
+    // otherwise someone could bomb one inbox with reset emails from many
+    // different IPs. The response is identical either way, so this never
+    // reveals whether the account exists.
+    const underLimit = await bumpRateLimit(env, "resetreq:" + email, 3600, 3);
+    if (underLimit) {
+      const row = await env.DB.prepare("SELECT id FROM managers WHERE email = ?").bind(email).first();
+      if (row) {
+        const token = randomHex(32);
+        const ts = nowIso();
+        const expiresAt = new Date(Date.now() + RESET_TOKEN_TTL_MS).toISOString();
+        await env.DB.prepare(
+          "INSERT INTO password_reset_tokens (token, manager_id, created_at, expires_at) VALUES (?, ?, ?, ?)"
+        )
+          .bind(token, row.id, ts, expiresAt)
+          .run();
+        const resetUrl = baseUrl + "/app#screen=reset&token=" + encodeURIComponent(token);
+        await sendPasswordResetEmail(env, email, resetUrl);
+      }
+    }
+  }
+  // Always the same response, whether or not the email has an account —
+  // this is what keeps the endpoint from being an account-enumeration tool.
+  return json({ ok: true });
+}
+
+async function resetPassword(env, body, request) {
+  if (!(await checkAuthRateLimit(env, request, "reset-confirm"))) {
+    return err(429, "Too many attempts — please try again in a few minutes.");
+  }
+  const token = String(body.token || "");
+  const password = String(body.password || "");
+  if (!token) return err(400, "invalid or expired reset link");
+  if (password.length < 8) return err(400, "password must be at least 8 characters");
+  const row = await env.DB.prepare("SELECT * FROM password_reset_tokens WHERE token = ?").bind(token).first();
+  if (!row || row.used_at || new Date(row.expires_at).getTime() < Date.now()) {
+    return err(400, "invalid or expired reset link");
+  }
+  const salt = randomHex(16);
+  const hash = await hashPassword(password, salt);
+  await env.DB.batch([
+    env.DB.prepare("UPDATE managers SET password_hash = ?, password_salt = ? WHERE id = ?").bind(hash, salt, row.manager_id),
+    env.DB.prepare("UPDATE password_reset_tokens SET used_at = ? WHERE token = ?").bind(nowIso(), token),
+    // Resetting the password signs the account out everywhere else too —
+    // important if the reset was triggered because the old password leaked.
+    env.DB.prepare("DELETE FROM sessions WHERE manager_id = ?").bind(row.manager_id),
+  ]);
+  const managerRow = await env.DB.prepare("SELECT * FROM managers WHERE id = ?").bind(row.manager_id).first();
+  const newToken = await createSession(env, row.manager_id);
+  return json({
+    token: newToken,
+    manager: {
+      id: managerRow.id,
+      email: managerRow.email,
+      phone: managerRow.phone || "",
+      notifyEmail: managerRow.notify_email === null || managerRow.notify_email === undefined ? true : !!managerRow.notify_email,
+      notifyWhatsapp: managerRow.notify_whatsapp === null || managerRow.notify_whatsapp === undefined ? true : !!managerRow.notify_whatsapp,
+      isAdmin: !!managerRow.is_admin,
+    },
+  });
 }
 
 async function readJson(request) {
@@ -1149,6 +1254,14 @@ export default {
       // /api/auth/login    { email, password }
       if (parts[1] === "auth" && parts[2] === "login" && request.method === "POST") {
         return await login(env, await readJson(request), request);
+      }
+      // /api/auth/forgot-password  { email }
+      if (parts[1] === "auth" && parts[2] === "forgot-password" && request.method === "POST") {
+        return await requestPasswordReset(env, await readJson(request), request, url.origin);
+      }
+      // /api/auth/reset-password   { token, password }
+      if (parts[1] === "auth" && parts[2] === "reset-password" && request.method === "POST") {
+        return await resetPassword(env, await readJson(request), request);
       }
       // /api/auth/logout
       if (parts[1] === "auth" && parts[2] === "logout" && request.method === "POST") {
