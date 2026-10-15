@@ -511,6 +511,7 @@ async function deleteVilla(env, villaId) {
     env.DB.prepare("DELETE FROM conversations WHERE villa_id = ?").bind(villaId),
     env.DB.prepare("DELETE FROM villas WHERE id = ?").bind(villaId),
   ]);
+  await deleteAllPhotosForVilla(env, villaId);
   return json({ ok: true });
 }
 
@@ -561,6 +562,10 @@ async function addKnowledge(env, villaId, body) {
 }
 
 async function updateKnowledge(env, villaId, itemId, body) {
+  const existing = await env.DB.prepare("SELECT photo FROM knowledge_items WHERE id = ? AND villa_id = ?")
+    .bind(itemId, villaId)
+    .first();
+  const newPhoto = body.photo || null;
   const res = await env.DB.prepare(
     "UPDATE knowledge_items SET title = ?, content = ?, fields_json = ?, photo = ? WHERE id = ? AND villa_id = ?"
   )
@@ -568,17 +573,24 @@ async function updateKnowledge(env, villaId, itemId, body) {
       body.title || "(sans titre)",
       body.content || "",
       JSON.stringify(body.fields || {}),
-      body.photo || null,
+      newPhoto,
       itemId,
       villaId
     )
     .run();
   if (!res.meta.changes) return err(404, "item not found");
+  if (existing && existing.photo && existing.photo !== newPhoto) {
+    await deletePhotoFromR2(env, existing.photo);
+  }
   return json({ ok: true });
 }
 
 async function deleteKnowledge(env, villaId, itemId) {
+  const existing = await env.DB.prepare("SELECT photo FROM knowledge_items WHERE id = ? AND villa_id = ?")
+    .bind(itemId, villaId)
+    .first();
   await env.DB.prepare("DELETE FROM knowledge_items WHERE id = ? AND villa_id = ?").bind(itemId, villaId).run();
+  if (existing && existing.photo) await deletePhotoFromR2(env, existing.photo);
   return json({ ok: true });
 }
 
@@ -614,6 +626,40 @@ async function serveKnowledgePhoto(env, key) {
       "cache-control": "public, max-age=31536000, immutable",
     },
   });
+}
+
+// A photo field is either a /img/<key> URL (R2-backed) or a legacy inline
+// base64 data URL — only the former has anything to clean up in R2.
+function r2KeyFromPhotoUrl(photoUrl) {
+  if (!photoUrl || typeof photoUrl !== "string" || !photoUrl.startsWith("/img/")) return null;
+  return photoUrl.slice(5);
+}
+
+async function deletePhotoFromR2(env, photoUrl) {
+  const key = r2KeyFromPhotoUrl(photoUrl);
+  if (!key || !env.PHOTOS) return;
+  try {
+    await env.PHOTOS.delete(key);
+  } catch (e) {
+    // Best-effort cleanup — an orphaned R2 object is harmless clutter,
+    // never worth failing the user's delete/update over.
+  }
+}
+
+async function deleteAllPhotosForVilla(env, villaId) {
+  if (!env.PHOTOS) return;
+  try {
+    let cursor;
+    do {
+      const listing = await env.PHOTOS.list({ prefix: villaId + "/", cursor });
+      if (listing.objects.length) {
+        await env.PHOTOS.delete(listing.objects.map((o) => o.key));
+      }
+      cursor = listing.truncated ? listing.cursor : undefined;
+    } while (cursor);
+  } catch (e) {
+    // Best-effort cleanup — see deletePhotoFromR2().
+  }
 }
 
 async function listConversations(env, villaId, request) {
