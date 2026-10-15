@@ -1,3 +1,6 @@
 node_modules/
 .wrangler/
 .dev.vars
+
+# Local-only — never commit secrets like this
+twilio recovery code.rtf
