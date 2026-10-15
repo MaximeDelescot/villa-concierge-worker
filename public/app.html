@@ -219,8 +219,25 @@
   .msg-bubble{ min-width:0; padding:9px 13px; border-radius:14px; font-size:13.5px; line-height:1.45; white-space:pre-wrap; box-shadow:var(--shadow); }
   .msg-photos{ display:flex; flex-wrap:wrap; gap:8px; margin-top:8px; }
   .msg-photo-item{ width:130px; max-width:100%; }
-  .msg-photo{ display:block; width:100%; aspect-ratio:1/1; object-fit:cover; border-radius:10px; }
+  .msg-photo{ display:block; width:100%; aspect-ratio:1/1; object-fit:cover; border-radius:10px; cursor:zoom-in; transition:opacity .15s ease; }
+  .msg-photo:hover{ opacity:.85; }
   .msg-photo-caption{ margin-top:4px; font-size:11px; line-height:1.3; color:var(--ink-faint); }
+
+  /* photo lightbox — full-size carousel opened from a chat photo */
+  .lightbox-overlay{ position:fixed; inset:0; background:rgba(10,12,9,.9); display:flex; align-items:center; justify-content:center; z-index:80; padding:24px; }
+  .lightbox-stage{ display:flex; flex-direction:column; align-items:center; gap:12px; max-width:min(92vw,720px); max-height:88vh; }
+  .lightbox-img{ max-width:100%; max-height:72vh; object-fit:contain; border-radius:10px; box-shadow:0 20px 60px rgba(0,0,0,.45); }
+  .lightbox-caption{ color:#fff; font-size:13.5px; text-align:center; max-width:60ch; }
+  .lightbox-close{ position:absolute; top:18px; right:18px; background:rgba(255,255,255,.12); border:none; color:#fff; width:36px; height:36px; border-radius:50%; display:flex; align-items:center; justify-content:center; cursor:pointer; }
+  .lightbox-close:hover{ background:rgba(255,255,255,.22); }
+  .lightbox-nav{ position:absolute; top:50%; transform:translateY(-50%); background:rgba(255,255,255,.12); border:none; color:#fff; width:44px; height:44px; border-radius:50%; display:flex; align-items:center; justify-content:center; cursor:pointer; }
+  .lightbox-nav:hover{ background:rgba(255,255,255,.22); }
+  .lightbox-prev{ left:18px; }
+  .lightbox-next{ right:18px; }
+  .lightbox-dots{ display:flex; gap:6px; }
+  .lightbox-dot{ width:7px; height:7px; border-radius:50%; background:rgba(255,255,255,.35); cursor:pointer; }
+  .lightbox-dot.active{ background:#fff; }
+  @media (max-width:640px){ .lightbox-nav{ width:38px; height:38px; } .lightbox-prev{ left:8px; } .lightbox-next{ right:8px; } }
   .msg-bubble.user{ background:var(--surface-2); color:var(--ink); border-bottom-right-radius:4px; }
   .msg-bubble.assistant, .msg-bubble.manager{ background:var(--accent-soft); color:var(--ink); border-bottom-left-radius:4px; }
   .msg-bubble.assistant.escalated{ background:var(--warn-soft); color:var(--ink); border-bottom-left-radius:4px; }
@@ -477,16 +494,64 @@
 
   // Shared by the guest chat and the manager's conversation thread: renders
   // the (optional) photos attached to a chat message, each with its
-  // (optional) caption underneath.
-  function renderMsgPhotos(photos) {
+  // (optional) caption underneath. Clicking one calls onOpen(photos, index)
+  // so the parent can show it full-size in a PhotoLightbox.
+  function renderMsgPhotos(photos, onOpen) {
     if (!photos || !photos.length) return null;
     return e("div", { className: "msg-photos" },
       photos.map(function (p, i) {
         return e("div", { className: "msg-photo-item", key: i },
-          e("img", { className: "msg-photo", src: p.url, alt: p.caption || "" }),
+          e("img", {
+            className: "msg-photo", src: p.url, alt: p.caption || "",
+            onClick: function () { if (onOpen) onOpen(photos, i); }
+          }),
           p.caption ? e("div", { className: "msg-photo-caption" }, p.caption) : null
         );
       })
+    );
+  }
+
+  // Full-size carousel for a message's photos — opened by tapping a
+  // thumbnail in renderMsgPhotos. Arrow keys / buttons / dots move between
+  // photos when there's more than one; Escape or an outside click closes it.
+  function PhotoLightbox(props) {
+    var photos = props.photos || [];
+    var count = photos.length;
+    var sIdx = useState(props.initialIndex || 0); var index = sIdx[0], setIndex = sIdx[1];
+    var onClose = props.onClose;
+
+    useEffect(function () {
+      function onKey(ev) {
+        if (ev.key === "Escape") onClose();
+        else if (ev.key === "ArrowRight" && count > 1) setIndex(function (i) { return (i + 1) % count; });
+        else if (ev.key === "ArrowLeft" && count > 1) setIndex(function (i) { return (i - 1 + count) % count; });
+      }
+      window.addEventListener("keydown", onKey);
+      return function () { window.removeEventListener("keydown", onKey); };
+    }, [count, onClose]);
+
+    if (!count) return null;
+    var photo = photos[Math.min(index, count - 1)];
+
+    function prev(ev) { ev.stopPropagation(); setIndex(function (i) { return (i - 1 + count) % count; }); }
+    function next(ev) { ev.stopPropagation(); setIndex(function (i) { return (i + 1) % count; }); }
+
+    return e("div", { className: "lightbox-overlay", onClick: onClose },
+      e("button", { className: "lightbox-close", onClick: onClose, "aria-label": "Close" }, e(IconX, { size: 20 })),
+      count > 1 ? e("button", { className: "lightbox-nav lightbox-prev", onClick: prev, "aria-label": "Previous photo" }, e(IconArrowLeft, { size: 22 })) : null,
+      e("div", { className: "lightbox-stage", onClick: function (ev) { ev.stopPropagation(); } },
+        e("img", { className: "lightbox-img", src: photo.url, alt: photo.caption || "" }),
+        photo.caption ? e("div", { className: "lightbox-caption" }, photo.caption) : null,
+        count > 1 ? e("div", { className: "lightbox-dots" },
+          photos.map(function (_, i) {
+            return e("span", {
+              key: i, className: "lightbox-dot" + (i === index ? " active" : ""),
+              onClick: function (ev) { ev.stopPropagation(); setIndex(i); }
+            });
+          })
+        ) : null
+      ),
+      count > 1 ? e("button", { className: "lightbox-nav lightbox-next", onClick: next, "aria-label": "Next photo" }, e(IconArrowRight, { size: 22 })) : null
     );
   }
 
@@ -962,6 +1027,7 @@
   function IconChevronDown(props) { return e(Icon, props, e("polyline", { points: "6 9 12 15 18 9" })); }
   function IconChevronRight(props) { return e(Icon, props, e("polyline", { points: "9 18 15 12 9 6" })); }
   function IconArrowLeft(props) { return e(Icon, props, e("line", { x1: 19, y1: 12, x2: 5, y2: 12 }), e("polyline", { points: "12 19 5 12 12 5" })); }
+  function IconArrowRight(props) { return e(Icon, props, e("line", { x1: 5, y1: 12, x2: 19, y2: 12 }), e("polyline", { points: "12 5 19 12 12 19" })); }
 
   // ---------------------------------------------------------------------
   // Dashboard
@@ -1322,6 +1388,8 @@
     var sReply = useState(""); var replyText = sReply[0], setReplyText = sReply[1];
     var sSending = useState(false); var sendingReply = sSending[0], setSendingReply = sSending[1];
     var sReplyErr = useState(""); var replyErr = sReplyErr[0], setReplyErr = sReplyErr[1];
+    var sLightbox = useState(null); var lightbox = sLightbox[0], setLightbox = sLightbox[1];
+    function openLightbox(photos, idx) { setLightbox({ photos: photos, index: idx }); }
 
     function sendReply(ev) {
       ev.preventDefault();
@@ -1355,7 +1423,7 @@
             e("div", { className: "msg-bubble " + m.role + (escalated ? " escalated" : "") },
               e("span", { className: "msg-role-label " + m.role + (escalated ? " escalated" : "") }, roleLabel),
               m.content,
-              renderMsgPhotos(m.photos)
+              renderMsgPhotos(m.photos, openLightbox)
             )
           );
         }),
@@ -1374,7 +1442,8 @@
             onClick: function () { api.setConversationHandled(props.villaId, convo.id, !convo.handled).then(props.onChanged); }
           }, convo.handled ? "Mark as not handled" : e(React.Fragment, null, e(IconCheck, { size: 13 }), " Mark as handled"))
         ) : null
-      ) : null
+      ) : null,
+      lightbox ? e(PhotoLightbox, { photos: lightbox.photos, initialIndex: lightbox.index, onClose: function () { setLightbox(null); } }) : null
     );
   }
 
@@ -1570,6 +1639,8 @@
     var sSending = useState(false); var sending = sSending[0], setSending = sSending[1];
     var sError = useState(""); var error = sError[0], setError = sError[1];
     var sLoadedHistory = useState(false); var loadedHistory = sLoadedHistory[0], setLoadedHistory = sLoadedHistory[1];
+    var sLightbox = useState(null); var lightbox = sLightbox[0], setLightbox = sLightbox[1];
+    function openLightbox(photos, idx) { setLightbox({ photos: photos, index: idx }); }
     var scrollRef = useRef(null);
 
     // Pin the page (no pinch/double-tap zoom, no body scroll) for as long
@@ -1662,7 +1733,7 @@
             e("div", { className: "msg-bubble " + m.role + (escalated ? " escalated" : "") },
               e("span", { className: "msg-role-label " + m.role + (escalated ? " escalated" : "") }, roleLabel),
               m.content,
-              renderMsgPhotos(m.photos)
+              renderMsgPhotos(m.photos, openLightbox)
             )
           );
         }),
@@ -1678,7 +1749,8 @@
       e("form", { className: "guest-input-bar", onSubmit: function (ev) { ev.preventDefault(); send(input); } },
         e("input", { className: "input", value: input, onChange: function (ev) { setInput(ev.target.value); }, placeholder: guestText("placeholder"), disabled: sending }),
         e("button", { className: "send-btn", type: "submit", disabled: sending || !input.trim() }, e(IconSend, { size: 17 }))
-      )
+      ),
+      lightbox ? e(PhotoLightbox, { photos: lightbox.photos, initialIndex: lightbox.index, onClose: function () { setLightbox(null); } }) : null
     );
   }
 
