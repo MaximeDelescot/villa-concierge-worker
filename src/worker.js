@@ -444,6 +444,9 @@ function buildSystemPrompt(villa, items, locale) {
     "- Sound like a warm, attentive on-site concierge: concise and natural, short answers over long paragraphs. Never mention that you are an AI, a bot, or a language model."
   );
   lines.push("- Ordinary conversational messages (greetings, thanks, small talk) can be answered naturally even if not covered below.");
+  lines.push(
+    "- Some villa information items below have a photo attached, marked \"[photo available, id: ...]\". When your answer is based on one of those items and the photo would genuinely help the guest (it shows the exact button, door code pad, or where something is), include that item's id as \"photoId\" in your JSON response. Only cite the one item your answer actually used, and only an id that is actually marked with a photo in the list below — never invent or guess one. Otherwise set \"photoId\" to null."
+  );
   lines.push("");
   lines.push("VILLA INFORMATION:");
   let hasAny = false;
@@ -456,7 +459,8 @@ function buildSystemPrompt(villa, items, locale) {
     for (const it of list) {
       const title = String(it.title || "").slice(0, 200);
       const content = String(it.content || "").slice(0, 1200);
-      lines.push("- " + title + ": " + content);
+      const photoNote = it.photo ? "  [photo available, id: " + it.id + "]" : "";
+      lines.push("- " + title + ": " + content + photoNote);
     }
   }
   if (!hasAny) lines.push("(No information has been entered for this villa yet.)");
@@ -464,7 +468,7 @@ function buildSystemPrompt(villa, items, locale) {
   lines.push(
     'Respond ONLY with a compact JSON object on one line, no markdown fences: {"reply": string (your message to the guest, written in the guest\'s own language), "answered": boolean (true only if your reply used the villa information above; false if you said you don\'t have the information), "topic": one short string, one of [' +
       CATEGORY_ORDER.join(", ") +
-      ", other]}"
+      ', other], "photoId": string or null (see the photo rule above)}'
   );
   return lines.join("\n").slice(0, 24000);
 }
@@ -1130,7 +1134,7 @@ async function chat(env, villaId, body, baseUrl, request) {
   if (!villa) return err(404, "villa not found");
 
   const { results: items } = await env.DB.prepare(
-    "SELECT category, title, content FROM knowledge_items WHERE villa_id = ? ORDER BY item_order ASC"
+    "SELECT id, category, title, content, photo FROM knowledge_items WHERE villa_id = ? ORDER BY item_order ASC"
   )
     .bind(villaId)
     .all();
@@ -1164,7 +1168,7 @@ async function chat(env, villaId, body, baseUrl, request) {
 
   const systemPrompt = buildSystemPrompt(villa, items, locale);
 
-  let reply, answered, topic;
+  let reply, answered, topic, photoUrl;
   try {
     const raw = await askClaude(env, systemPrompt, turns);
     const result = parseLenientJson(raw);
@@ -1174,11 +1178,19 @@ async function chat(env, villaId, body, baseUrl, request) {
         : raw || "Sorry, I didn't quite catch that — could you rephrase?";
     answered = !!(result && result.answered);
     topic = (result && result.topic) || "other";
+    // Only trust a photoId that genuinely matches an item that has a photo
+    // — never take the model's word for a URL, and never show one for an
+    // unanswered message.
+    photoUrl = null;
+    if (answered && result && result.photoId) {
+      const matchedItem = items.find((it) => it.id === result.photoId && it.photo);
+      if (matchedItem) photoUrl = matchedItem.photo;
+    }
   } catch (e) {
     return err(e.code === "rate_limited" ? 429 : 502, e.message || "The concierge is unavailable right now.");
   }
 
-  const assistantMsg = { role: "assistant", content: reply, ts: nowIso(), answered, topic };
+  const assistantMsg = { role: "assistant", content: reply, ts: nowIso(), answered, topic, photo: photoUrl || null };
   const newMessages = messages.concat([userMsg, assistantMsg]);
   const ts = nowIso();
 
@@ -1208,7 +1220,7 @@ async function chat(env, villaId, body, baseUrl, request) {
     await notifyManagerUnanswered(env, villa, message, convoId, baseUrl);
   }
 
-  return json({ reply, answered, topic });
+  return json({ reply, answered, topic, photo: photoUrl || null });
 }
 
 // ---------------------------------------------------------------------

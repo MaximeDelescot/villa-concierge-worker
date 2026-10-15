@@ -211,6 +211,7 @@
   .msg-icon.assistant, .msg-icon.manager{ background:var(--accent); color:var(--accent-contrast); }
   .msg-icon.assistant.escalated{ background:var(--warn); color:var(--warn-soft); }
   .msg-bubble{ min-width:0; padding:9px 13px; border-radius:14px; font-size:13.5px; line-height:1.45; white-space:pre-wrap; box-shadow:var(--shadow); }
+  .msg-photo{ display:block; max-width:220px; width:100%; border-radius:10px; margin-top:8px; }
   .msg-bubble.user{ background:var(--surface-2); color:var(--ink); border-bottom-right-radius:4px; }
   .msg-bubble.assistant, .msg-bubble.manager{ background:var(--accent-soft); color:var(--ink); border-bottom-left-radius:4px; }
   .msg-bubble.assistant.escalated{ background:var(--warn-soft); color:var(--ink); border-bottom-left-radius:4px; }
@@ -1298,7 +1299,8 @@
             e("div", { className: "msg-icon " + m.role + (escalated ? " escalated" : "") }, roleIcon),
             e("div", { className: "msg-bubble " + m.role + (escalated ? " escalated" : "") },
               e("span", { className: "msg-role-label " + m.role + (escalated ? " escalated" : "") }, roleLabel),
-              m.content
+              m.content,
+              m.photo ? e("img", { className: "msg-photo", src: m.photo, alt: "" }) : null
             )
           );
         }),
@@ -1573,7 +1575,7 @@
       setSending(true);
 
       api.chat(villaId, sessionId, trimmed, getBrowserLocale()).then(function (result) {
-        var assistantMsg = { role: "assistant", content: result.reply, ts: nowIso(), answered: result.answered, topic: result.topic };
+        var assistantMsg = { role: "assistant", content: result.reply, ts: nowIso(), answered: result.answered, topic: result.topic, photo: result.photo || null };
         setMessages(optimistic.concat([assistantMsg]));
         setSending(false);
       }).catch(function (httpErr) {
@@ -1604,7 +1606,8 @@
             e("div", { className: "msg-icon " + m.role + (escalated ? " escalated" : "") }, roleIcon),
             e("div", { className: "msg-bubble " + m.role + (escalated ? " escalated" : "") },
               e("span", { className: "msg-role-label " + m.role + (escalated ? " escalated" : "") }, roleLabel),
-              m.content
+              m.content,
+              m.photo ? e("img", { className: "msg-photo", src: m.photo, alt: "" }) : null
             )
           );
         }),
