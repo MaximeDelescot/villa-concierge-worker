@@ -174,19 +174,6 @@
     flex: none;
   }
 
-  .wordmark-logo {
-    height: 28px;
-    width: auto;
-    display: block;
-  }
-  .wordmark-logo.theme-dark { display: none; }
-  @media (prefers-color-scheme: dark) {
-    :root:not([data-theme="light"]) .wordmark-logo.theme-light { display: none; }
-    :root:not([data-theme="light"]) .wordmark-logo.theme-dark { display: block; }
-  }
-  :root[data-theme="dark"] .wordmark-logo.theme-light { display: none; }
-  :root[data-theme="dark"] .wordmark-logo.theme-dark { display: block; }
-
   .btn {
     display: inline-flex;
     align-items: center;
@@ -911,10 +898,7 @@
 
 <header class="site">
   <div class="wrap header-row">
-    <div class="wordmark">
-      <img class="wordmark-logo theme-light" src="/logo.svg" alt="Villa Concierge">
-      <img class="wordmark-logo theme-dark" src="/logo-dark.svg" alt="Villa Concierge">
-    </div>
+    <div class="wordmark"><span class="mark">VC</span>Villa Concierge</div>
     <nav class="nav-links">
       <a href="#principe">Comment ça marche</a>
       <a href="#managers">Pour les managers</a>
