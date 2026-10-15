@@ -151,9 +151,54 @@ async function loadVillaForManager(env, villaId, manager) {
   }
   return { villa: row, errorResponse: null };
 }
-async function signup(env, body) {
+// A fixed-length placeholder salt so that hashing a password against a
+// non-existent account costs exactly the same PBKDF2 time as a real one —
+// otherwise the fast "no such row" path vs. the slow "hash and compare"
+// path is a timing side-channel an attacker can use to enumerate which
+// emails have an account.
+const DUMMY_PASSWORD_SALT = "a3f1c9d2b7e4f08f3c6a9d1e2b4f7c8a";
+
+// IP-based throttling for /api/auth/login and /api/auth/signup, on top of
+// the per-email lockout below — this one catches a single attacker (or
+// script) hammering either endpoint, regardless of which account(s) it's
+// targeting.
+async function checkAuthRateLimit(env, request, kind) {
+  const ip = (request && request.headers.get("CF-Connecting-IP")) || "unknown";
+  const burstLimit = kind === "signup" ? 5 : 15;
+  const dayLimit = kind === "signup" ? 20 : 100;
+  if (!(await bumpRateLimit(env, "ip:" + ip + ":" + kind + ":5m", 300, burstLimit))) return false;
+  if (!(await bumpRateLimit(env, "ip:" + ip + ":" + kind + ":day", 86400, dayLimit))) return false;
+  return true;
+}
+
+// Per-email lockout for login: 5 failed attempts locks that specific
+// account out for 15 minutes, no matter how many different IPs the
+// attempts come from (the IP guard above alone wouldn't catch a
+// distributed/credential-stuffing attempt against one target account).
+const LOGIN_LOCKOUT_WINDOW_S = 15 * 60;
+const LOGIN_LOCKOUT_MAX_FAILURES = 5;
+
+async function isLoginLocked(env, email) {
+  const bucket = Math.floor(Date.now() / (LOGIN_LOCKOUT_WINDOW_S * 1000));
+  const bucketKey = "loginfail:" + email + ":" + bucket;
+  try {
+    const row = await env.DB.prepare("SELECT count FROM rate_limits WHERE bucket_key = ?").bind(bucketKey).first();
+    return !!row && row.count >= LOGIN_LOCKOUT_MAX_FAILURES;
+  } catch (e) {
+    return false;
+  }
+}
+
+async function recordFailedLogin(env, email) {
+  await bumpRateLimit(env, "loginfail:" + email, LOGIN_LOCKOUT_WINDOW_S, LOGIN_LOCKOUT_MAX_FAILURES);
+}
+
+async function signup(env, body, request) {
   const email = String(body.email || "").trim().toLowerCase();
   const password = String(body.password || "");
+  if (!(await checkAuthRateLimit(env, request, "signup"))) {
+    return err(429, "Too many attempts — please try again in a few minutes.");
+  }
   if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return err(400, "a valid email is required");
   if (password.length < 8) return err(400, "password must be at least 8 characters");
   const existing = await env.DB.prepare("SELECT id FROM managers WHERE email = ?").bind(email).first();
@@ -174,13 +219,25 @@ async function signup(env, body) {
   const token = await createSession(env, id);
   return json({ token: token, manager: { id: id, email: email, phone: "", notifyEmail: true, notifyWhatsapp: true, isAdmin: !!isAdmin } }, 201);
 }
-async function login(env, body) {
+async function login(env, body, request) {
   const email = String(body.email || "").trim().toLowerCase();
   const password = String(body.password || "");
+
+  if (!(await checkAuthRateLimit(env, request, "login"))) {
+    return err(429, "Too many attempts — please try again in a few minutes.");
+  }
+  if (email && (await isLoginLocked(env, email))) {
+    return err(429, "Too many failed attempts for this account — please try again in 15 minutes.");
+  }
+
   const row = await env.DB.prepare("SELECT * FROM managers WHERE email = ?").bind(email).first();
-  if (!row) return err(401, "invalid email or password");
-  const hash = await hashPassword(password, row.password_salt);
-  if (hash !== row.password_hash) return err(401, "invalid email or password");
+  // Hash against a dummy salt when the account doesn't exist so this path
+  // costs the same as a real comparison (see DUMMY_PASSWORD_SALT above).
+  const hash = await hashPassword(password, row ? row.password_salt : DUMMY_PASSWORD_SALT);
+  if (!row || hash !== row.password_hash) {
+    if (email) await recordFailedLogin(env, email);
+    return err(401, "invalid email or password");
+  }
   const token = await createSession(env, row.id);
   return json({
     token: token,
@@ -1087,11 +1144,11 @@ export default {
 
       // /api/auth/signup   { email, password }
       if (parts[1] === "auth" && parts[2] === "signup" && request.method === "POST") {
-        return await signup(env, await readJson(request));
+        return await signup(env, await readJson(request), request);
       }
       // /api/auth/login    { email, password }
       if (parts[1] === "auth" && parts[2] === "login" && request.method === "POST") {
-        return await login(env, await readJson(request));
+        return await login(env, await readJson(request), request);
       }
       // /api/auth/logout
       if (parts[1] === "auth" && parts[2] === "logout" && request.method === "POST") {
