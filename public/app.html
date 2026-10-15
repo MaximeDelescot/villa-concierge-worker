@@ -764,7 +764,11 @@
               }, busy ? "..." : (mode === "signup" ? "Create account" : mode === "forgot" ? "Send reset link" : "Sign in"))
             ),
         mode === "login" ? e("button", {
-          type: "button", className: "btn btn-ghost", style: { marginTop: "10px", width: "100%" },
+          type: "button", className: "muted small",
+          style: {
+            background: "none", border: "none", cursor: "pointer", padding: 0,
+            marginTop: "10px", width: "100%", textAlign: "center", textDecoration: "underline"
+          },
           onClick: function () { switchMode("forgot"); }
         }, "Forgot your password?") : null,
         e("button", {
