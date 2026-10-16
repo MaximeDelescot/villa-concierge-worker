@@ -146,8 +146,10 @@
 
   /* tabs */
   .tabs{ display:flex; gap:4px; border-bottom:1px solid var(--border); margin-bottom:22px; overflow-x:auto; }
-  .tab{ background:none; border:none; padding:10px 14px; font-weight:600; font-size:13.5px; color:var(--ink-faint); cursor:pointer; border-bottom:2px solid transparent; white-space:nowrap; }
+  .tab{ background:none; border:none; padding:10px 14px; font-weight:600; font-size:13.5px; color:var(--ink-faint); cursor:pointer; border-bottom:2px solid transparent; white-space:nowrap; display:inline-flex; align-items:center; gap:6px; }
   .tab.active{ color:var(--accent-ink); border-bottom-color:var(--accent); }
+  .tab-badge{ display:inline-flex; align-items:center; justify-content:center; min-width:17px; height:17px; padding:0 5px; border-radius:20px; background:var(--warn); color:var(--warn-soft); font-size:10.5px; font-weight:700; line-height:1; }
+  .villa-card-title-row{ display:flex; align-items:center; gap:8px; }
 
   /* knowledge base */
   .kb-progress{ display:flex; flex-direction:column; gap:6px; font-size:12.5px; color:var(--ink-dim); }
@@ -961,7 +963,7 @@
       return e("button", {
         key: t.id, className: "tab" + (props.active === t.id ? " active" : ""),
         onClick: function () { props.onChange(t.id); }
-      }, t.label);
+      }, t.label, t.badge ? e("span", { className: "tab-badge" }, t.badge) : null);
     }));
   }
   function Modal(props) {
@@ -1054,7 +1056,10 @@
         e("div", { className: "villa-emoji" }, e(IconHome, { size: 20 })),
         e(ConfirmButton, { onConfirm: function () { onDelete(villa.id); } }, e(IconTrash, { size: 15 }))
       ),
-      e("h3", { className: "villa-card-title" }, villa.name),
+      e("div", { className: "villa-card-title-row" },
+        e("h3", { className: "villa-card-title" }, villa.name),
+        villa.pendingCount ? e("span", { className: "tab-badge" }, villa.pendingCount) : null
+      ),
       e("p", { className: "villa-card-meta" }, "Created " + formatDate(villa.createdAt)),
       villa.ownerEmail ? e("p", { className: "villa-card-meta" }, "Manager: " + villa.ownerEmail) : null,
       e("div", { className: "row gap", onClick: function (ev) { ev.stopPropagation(); } },
@@ -1562,6 +1567,11 @@
   function VillaDetail(props) {
     var villaId = props.villaId, tab = props.tab, navigate = props.navigate, onPreview = props.onPreview;
     var vv = useVilla(villaId); var villa = vv[0], reloadVilla = vv[1];
+    // Drives the small notification badge on the Conversations tab below --
+    // the panel itself fetches independently once it mounts, this is just
+    // for the badge to stay accurate even while another tab is active.
+    var cv = useConversations(true, villaId); var tabConvos = cv[0];
+    var pendingCount = (tabConvos || []).filter(function (c) { return c.needsHuman && !c.handled; }).length;
 
     if (villa === undefined) return e(LoadingBlock);
     if (villa === null) return e(EmptyState, {
@@ -1572,7 +1582,7 @@
     var tabs = [
       { id: "knowledge", label: "Knowledge base" },
       { id: "qr", label: "QR code & link" },
-      { id: "conversations", label: "Conversations" },
+      { id: "conversations", label: "Conversations", badge: pendingCount },
       { id: "settings", label: "Settings" }
     ];
     var activeTab = tabs.some(function (t) { return t.id === tab; }) ? tab : "knowledge";

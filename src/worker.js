@@ -626,17 +626,27 @@ function stripInternalMessageFields(m) {
 // ---------------------------------------------------------------------
 
 async function listVillas(env, manager) {
+  // The pending-questions count powers the small notification badge next
+  // to each villa and on its "Conversations" tab -- computed here with a
+  // correlated subquery rather than a separate round trip per villa.
+  const pendingSubquery =
+    "(SELECT COUNT(*) FROM conversations c WHERE c.villa_id = villas.id AND c.needs_human = 1 AND c.handled = 0) as pending_count";
   const stmt = manager.isAdmin
     ? env.DB.prepare(
-        "SELECT villas.*, managers.email as owner_email FROM villas LEFT JOIN managers ON managers.id = villas.manager_id ORDER BY villas.created_at DESC"
+        "SELECT villas.*, managers.email as owner_email, " +
+          pendingSubquery +
+          " FROM villas LEFT JOIN managers ON managers.id = villas.manager_id ORDER BY villas.created_at DESC"
       )
-    : env.DB.prepare("SELECT * FROM villas WHERE manager_id = ? ORDER BY created_at DESC").bind(manager.id);
+    : env.DB.prepare(
+        "SELECT villas.*, " + pendingSubquery + " FROM villas WHERE manager_id = ? ORDER BY created_at DESC"
+      ).bind(manager.id);
   const { results } = await stmt.all();
   return json(results.map(rowToVilla));
 }
 function rowToVilla(r) {
   const out = { id: r.id, name: r.name, slug: r.slug, createdAt: r.created_at, updatedAt: r.updated_at };
   if (r.owner_email) out.ownerEmail = r.owner_email;
+  if (r.pending_count !== undefined) out.pendingCount = r.pending_count || 0;
   return out;
 }
 
