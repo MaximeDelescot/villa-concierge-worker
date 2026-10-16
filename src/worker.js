@@ -281,7 +281,7 @@ async function sendPasswordResetEmail(env, toEmail, resetUrl) {
         "content-type": "application/json",
       },
       body: JSON.stringify({
-        from: env.RESEND_FROM || "Villa Concierge <onboarding@resend.dev>",
+        from: env.RESEND_FROM_RESET || "Villa Concierge <noreply@villa-concierge.com>",
         to: [toEmail],
         subject: "Réinitialisation de votre mot de passe — Villa Concierge",
         html:
@@ -1010,7 +1010,7 @@ async function sendManagerAlertEmail(env, toEmail, villaName, question, conversa
         "content-type": "application/json",
       },
       body: JSON.stringify({
-        from: env.RESEND_FROM || "Villa Concierge <onboarding@resend.dev>",
+        from: env.RESEND_FROM_ALERT || "Villa Concierge <alert@villa-concierge.com>",
         to: [toEmail],
         subject: "Question d'un guest — " + villaName,
         html:
