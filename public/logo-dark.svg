@@ -16,20 +16,14 @@
   </defs>
 
   <g transform="translate(25,31.05) scale(0.82)">
-    <circle cx="50" cy="7" r="5" fill="none" stroke="#49B695" stroke-width="4.2"/>
-    <path d="M50 14
-             C32 14 20 29 20 44
-             C20 58 14 64 8 70
-             C4 74 8 78 14 78
-             C34 84 66 84 86 78
-             C92 78 96 74 92 70
-             C86 64 80 58 80 44
-             C80 29 68 14 50 14
-             Z" fill="#49B695"/>
-    <circle cx="50" cy="92" r="6.5" fill="#49B695"/>
+    <rect x="10" y="80.5" width="80" height="7.5" rx="3.75" fill="#49B695"/>
+    <path d="M17 80.5 A33 39 0 0 1 83 80.5 Z" fill="#49B695"/>
+    <rect x="46.5" y="21" width="7" height="22" rx="3" fill="#49B695"/>
+    <circle cx="50" cy="18" r="7.5" fill="#49B695"/>
+    <rect x="14.5" y="79.3" width="71" height="2.4" fill="#1B211C"/>
   </g>
 
-  <text x="137" y="91" class="wordmark">
+  <text x="115" y="91" class="wordmark">
     <tspan fill="#49B695">Villa</tspan><tspan fill="#EDEEE9"> Concierge</tspan>
   </text>
 </svg>
