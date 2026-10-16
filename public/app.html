@@ -1678,14 +1678,27 @@
     useEffect(function () { messagesRef.current = messages; }, [messages]);
     useEffect(function () {
       if (!villaId || !loadedHistory) return;
-      var interval = setInterval(function () {
+      function poll() {
         if (sendingRef.current) return; // an AI reply is already in flight
         api.getSession(villaId, sessionId).then(function (data) {
           var fresh = data.messages || [];
           if (fresh.length !== messagesRef.current.length) setMessages(fresh);
         }).catch(function () {});
-      }, 6000);
-      return function () { clearInterval(interval); };
+      }
+      var interval = setInterval(poll, 6000);
+      // iOS Safari throttles/suspends setInterval once a tab is backgrounded
+      // or the screen locks, so a manager's reply can sit unseen well past
+      // 6s. Catch up immediately the moment the guest looks at the tab
+      // again -- on a visibility change, and on pageshow for the bfcache
+      // restore that happens when swiping back to an already-open tab.
+      function onVisible() { if (document.visibilityState === "visible") poll(); }
+      document.addEventListener("visibilitychange", onVisible);
+      window.addEventListener("pageshow", poll);
+      return function () {
+        clearInterval(interval);
+        document.removeEventListener("visibilitychange", onVisible);
+        window.removeEventListener("pageshow", poll);
+      };
     }, [villaId, sessionId, loadedHistory]);
 
     useEffect(function () {
