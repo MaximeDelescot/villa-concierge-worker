@@ -2,9 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="theme-color" content="#FFFFFF" media="(prefers-color-scheme: light)">
-<meta name="theme-color" content="#1B221C" media="(prefers-color-scheme: dark)">
+<meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Villa Concierge</title>
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
 <link rel="icon" href="/favicon-32.png" type="image/png" sizes="32x32">
@@ -55,7 +53,7 @@
   }
   *{box-sizing:border-box;}
   html,body{ margin:0; padding:0; }
-  body.guest-mode{ width:100%; height:100vh; height:100lvh; overflow:hidden; overscroll-behavior:none; background:var(--surface); }
+  body.guest-mode{ position:fixed; inset:0; width:100%; height:100%; overflow:hidden; overscroll-behavior:none; }
   body{ background:var(--bg); }
   #approot{ font-family:'Inter',system-ui,sans-serif; color:var(--ink); background:var(--bg); min-height:100vh; }
   h1,h2,h3{ font-family:'Fraunces',Georgia,serif; font-weight:600; margin:0; text-wrap:balance; }
@@ -256,12 +254,12 @@
   .convo-reply-form{ margin-top:10px; }
 
   /* guest app */
-  .guest-app{ display:flex; flex-direction:column; height:100vh; height:100dvh; background:var(--bg); max-width:560px; margin:0 auto; touch-action:pan-x pan-y; }
+  .guest-app{ display:flex; flex-direction:column; height:100vh; height:100dvh; background:var(--bg); max-width:560px; margin:0 auto; touch-action:manipulation; }
   .preview-overlay{ position:fixed; inset:0; background:var(--bg); z-index:60; display:flex; flex-direction:column; }
   .preview-bar{ display:flex; align-items:center; justify-content:space-between; gap:10px; padding:9px 14px; background:var(--accent-soft); color:var(--accent-ink); border-bottom:1px solid var(--border); font-size:12px; font-weight:700; flex-shrink:0; box-shadow:var(--shadow); }
   .preview-body{ flex:1; min-height:0; display:flex; }
   .preview-body .guest-app{ height:100%; max-width:none; flex:1; }
-  .guest-header{ position:relative; z-index:2; display:flex; align-items:center; gap:12px; padding:calc(16px + env(safe-area-inset-top)) 18px 16px; background:var(--surface); box-shadow:0 2px 4px rgba(27,33,28,0.05), 0 10px 24px -14px rgba(27,33,28,0.25); }
+  .guest-header{ position:relative; z-index:2; display:flex; align-items:center; gap:12px; padding:16px 18px; background:var(--surface); box-shadow:0 2px 4px rgba(27,33,28,0.05), 0 10px 24px -14px rgba(27,33,28,0.25); }
   .guest-header-emoji{ width:36px; height:36px; border-radius:10px; background:var(--accent); color:var(--accent-contrast); display:flex; align-items:center; justify-content:center; flex-shrink:0; }
   .guest-header-title{ font-family:'Fraunces',serif; font-weight:600; font-size:16.5px; }
   .guest-header-sub{ font-size:11.5px; color:var(--ink-faint); }
@@ -1657,7 +1655,7 @@
       document.body.classList.add("guest-mode");
       var meta = document.querySelector('meta[name="viewport"]');
       var prevContent = meta ? meta.getAttribute("content") : null;
-      if (meta) meta.setAttribute("content", "width=device-width, initial-scale=1, viewport-fit=cover");
+      if (meta) meta.setAttribute("content", "width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no");
       return function () {
         document.body.classList.remove("guest-mode");
         if (meta && prevContent !== null) meta.setAttribute("content", prevContent);
