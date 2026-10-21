@@ -1755,6 +1755,22 @@
     var s4 = useState(null); var addEssentialKey = s4[0], setAddEssentialKey = s4[1];
     var s5 = useState(null); var addPrefillContent = s5[0], setAddPrefillContent = s5[1];
 
+    // Self-heals the Location category: if the villa has an address on file
+    // but no Location item yet (set before this existed, or added later via
+    // Settings), silently create one from the address as soon as this tab
+    // is viewed. From then on it's a normal knowledge item the manager can
+    // edit or extend like any other -- this only fills the gap, it never
+    // overwrites an existing Location item.
+    useEffect(function () {
+      if (!villa || !villa.address || items === null) return;
+      var hasLocation = items.some(function (i) { return i.category === "location"; });
+      if (hasLocation) return;
+      api.addKnowledge(villaId, {
+        category: "location", title: "Address", content: villa.address,
+        fields: { title: "Address", content: villa.address }
+      }).then(reload).catch(function () {});
+    }, [villa, items, villaId]);
+
     if (items === null) return e(SkeletonKnowledgeBase);
     var byCat = {};
     CATEGORIES.forEach(function (c) { byCat[c.id] = items.filter(function (i) { return i.category === c.id; }); });
