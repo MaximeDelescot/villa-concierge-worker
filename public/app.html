@@ -802,7 +802,7 @@
     function updateProfile(data) {
       return api.updateProfile(data).then(function (result) {
         setManager(function (m) {
-          return m ? Object.assign({}, m, { phone: result.phone, notifyEmail: result.notifyEmail, notifyWhatsapp: result.notifyWhatsapp }) : m;
+          return m ? Object.assign({}, m, { phone: result.phone, notifyEmail: result.notifyEmail, notifyWhatsapp: result.notifyWhatsapp, preferredLocale: result.preferredLocale }) : m;
         });
       });
     }
@@ -1811,6 +1811,31 @@
     );
   }
 
+  // A manager's conversations are machine-translated into whatever they
+  // pick here. Codes match ISO 639-1 so they line up with what the
+  // translation engine and Intl.DisplayNames already understand elsewhere
+  // in the app. Each language is labelled in itself, not in English, so a
+  // manager scanning the list recognizes their own at a glance.
+  var PREFERRED_LOCALE_OPTIONS = [
+    { code: "en", label: "English" },
+    { code: "fr", label: "Français" },
+    { code: "id", label: "Bahasa Indonesia" },
+    { code: "es", label: "Español" },
+    { code: "de", label: "Deutsch" },
+    { code: "it", label: "Italiano" },
+    { code: "pt", label: "Português" },
+    { code: "nl", label: "Nederlands" },
+    { code: "ru", label: "Русский" },
+    { code: "zh", label: "中文" },
+    { code: "ja", label: "日本語" },
+    { code: "ko", label: "한국어" }
+  ];
+
+  function browserLocaleGuess() {
+    var lang = (typeof navigator !== "undefined" && navigator.language) || "en";
+    return lang.split("-")[0].toLowerCase();
+  }
+
   function ProfileModal(props) {
     var manager = props.manager || {};
     var s1 = useState(manager.phone || ""); var phone = s1[0], setPhone = s1[1];
@@ -1819,11 +1844,15 @@
     var s4 = useState(""); var saved = s4[0], setSaved = s4[1];
     var s5 = useState(manager.notifyEmail !== false); var notifyEmail = s5[0], setNotifyEmail = s5[1];
     var s6 = useState(manager.notifyWhatsapp !== false); var notifyWhatsapp = s6[0], setNotifyWhatsapp = s6[1];
+    // No saved preference yet (older account, created before this setting
+    // existed) -- default the picker to the browser's own language rather
+    // than showing it blank; saving will persist that choice explicitly.
+    var s7 = useState(manager.preferredLocale || browserLocaleGuess()); var preferredLocale = s7[0], setPreferredLocale = s7[1];
 
     function handleSave(ev) {
       ev.preventDefault();
       setBusy(true); setError(""); setSaved("");
-      props.onUpdateProfile({ phone: phone.trim(), notifyEmail: notifyEmail, notifyWhatsapp: notifyWhatsapp }).then(function () {
+      props.onUpdateProfile({ phone: phone.trim(), notifyEmail: notifyEmail, notifyWhatsapp: notifyWhatsapp, preferredLocale: preferredLocale }).then(function () {
         setBusy(false);
         setSaved("Saved.");
       }).catch(function (e2) {
@@ -1842,6 +1871,15 @@
               onChange: function (ev) { setPhone(ev.target.value); }
             })
           ),
+          e(Field, { label: "Language for reading conversations" },
+            e("select", {
+              className: "input", value: preferredLocale,
+              onChange: function (ev) { setPreferredLocale(ev.target.value); }
+            }, PREFERRED_LOCALE_OPTIONS.map(function (opt) {
+              return e("option", { key: opt.code, value: opt.code }, opt.label);
+            }))
+          ),
+          e("p", { className: "muted small" }, "Guest messages are shown to you translated into this language automatically — the guest still reads everything in their own."),
           e("div", { className: "switch-row" },
             e("span", { className: "switch-label" }, "Email alerts"),
             e(Switch, { checked: notifyEmail, onChange: setNotifyEmail })

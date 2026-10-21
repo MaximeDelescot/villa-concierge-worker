@@ -113,7 +113,7 @@ async function getAuthedManager(request, env) {
   const token = bearerToken(request);
   if (!token) return null;
   const row = await env.DB.prepare(
-    "SELECT managers.id as id, managers.email as email, managers.phone as phone, managers.notify_email as notify_email, managers.notify_whatsapp as notify_whatsapp, managers.is_admin as is_admin, sessions.expires_at as expires_at " +
+    "SELECT managers.id as id, managers.email as email, managers.phone as phone, managers.notify_email as notify_email, managers.notify_whatsapp as notify_whatsapp, managers.preferred_locale as preferred_locale, managers.is_admin as is_admin, sessions.expires_at as expires_at " +
       "FROM sessions JOIN managers ON managers.id = sessions.manager_id WHERE sessions.token = ?"
   )
     .bind(token)
@@ -126,6 +126,7 @@ async function getAuthedManager(request, env) {
     phone: row.phone || "",
     notifyEmail: row.notify_email === null || row.notify_email === undefined ? true : !!row.notify_email,
     notifyWhatsapp: row.notify_whatsapp === null || row.notify_whatsapp === undefined ? true : !!row.notify_whatsapp,
+    preferredLocale: row.preferred_locale || "",
     isAdmin: !!row.is_admin,
   };
 }
@@ -136,10 +137,13 @@ async function updateManagerProfile(env, managerId, body) {
   }
   const notifyEmail = body.notifyEmail === undefined ? true : !!body.notifyEmail;
   const notifyWhatsapp = body.notifyWhatsapp === undefined ? true : !!body.notifyWhatsapp;
-  await env.DB.prepare("UPDATE managers SET phone = ?, notify_email = ?, notify_whatsapp = ? WHERE id = ?")
-    .bind(raw || null, notifyEmail ? 1 : 0, notifyWhatsapp ? 1 : 0, managerId)
+  // Empty string means "forget it, go back to auto-detecting from the
+  // browser" -- stored as NULL, same state as a manager who never set one.
+  const preferredLocale = shortLocale(body.preferredLocale || "");
+  await env.DB.prepare("UPDATE managers SET phone = ?, notify_email = ?, notify_whatsapp = ?, preferred_locale = ? WHERE id = ?")
+    .bind(raw || null, notifyEmail ? 1 : 0, notifyWhatsapp ? 1 : 0, preferredLocale || null, managerId)
     .run();
-  return json({ ok: true, phone: raw, notifyEmail: notifyEmail, notifyWhatsapp: notifyWhatsapp });
+  return json({ ok: true, phone: raw, notifyEmail: notifyEmail, notifyWhatsapp: notifyWhatsapp, preferredLocale: preferredLocale });
 }
 async function requireAuth(request, env) {
   const manager = await getAuthedManager(request, env);
@@ -219,13 +223,17 @@ async function signup(env, body, request) {
   const hash = await hashPassword(password, salt);
   const id = newId("mgr");
   const ts = nowIso();
+  // First time around there's nothing to ask the manager yet, so default
+  // their reading language to whatever their browser is set to -- they can
+  // change it later in their profile.
+  const initialLocale = shortLocale(parseAcceptLanguage(request && request.headers.get("Accept-Language")));
   await env.DB.prepare(
-    "INSERT INTO managers (id, email, password_hash, password_salt, is_admin, created_at) VALUES (?, ?, ?, ?, ?, ?)"
+    "INSERT INTO managers (id, email, password_hash, password_salt, is_admin, created_at, preferred_locale) VALUES (?, ?, ?, ?, ?, ?, ?)"
   )
-    .bind(id, email, hash, salt, isAdmin, ts)
+    .bind(id, email, hash, salt, isAdmin, ts, initialLocale || null)
     .run();
   const token = await createSession(env, id);
-  return json({ token: token, manager: { id: id, email: email, phone: "", notifyEmail: true, notifyWhatsapp: true, isAdmin: !!isAdmin } }, 201);
+  return json({ token: token, manager: { id: id, email: email, phone: "", notifyEmail: true, notifyWhatsapp: true, preferredLocale: initialLocale, isAdmin: !!isAdmin } }, 201);
 }
 async function login(env, body, request) {
   const email = String(body.email || "").trim().toLowerCase();
@@ -255,6 +263,7 @@ async function login(env, body, request) {
       phone: row.phone || "",
       notifyEmail: row.notify_email === null || row.notify_email === undefined ? true : !!row.notify_email,
       notifyWhatsapp: row.notify_whatsapp === null || row.notify_whatsapp === undefined ? true : !!row.notify_whatsapp,
+      preferredLocale: row.preferred_locale || "",
       isAdmin: !!row.is_admin,
     },
   });
@@ -358,6 +367,7 @@ async function resetPassword(env, body, request) {
       phone: managerRow.phone || "",
       notifyEmail: managerRow.notify_email === null || managerRow.notify_email === undefined ? true : !!managerRow.notify_email,
       notifyWhatsapp: managerRow.notify_whatsapp === null || managerRow.notify_whatsapp === undefined ? true : !!managerRow.notify_whatsapp,
+      preferredLocale: managerRow.preferred_locale || "",
       isAdmin: !!managerRow.is_admin,
     },
   });
@@ -888,17 +898,17 @@ async function deleteAllPhotosForVilla(env, villaId) {
   }
 }
 
-async function listConversations(env, villaId, request) {
+async function listConversations(env, villaId, request, manager) {
   const { results } = await env.DB.prepare(
     "SELECT * FROM conversations WHERE villa_id = ? ORDER BY updated_at DESC LIMIT 200"
   )
     .bind(villaId)
     .all();
   // A manager should never have to read a guest's conversation in a
-  // language they don't speak — translate everything into whatever
-  // language their own browser is set to, mirroring what /reply does for
-  // the guest in the other direction.
-  const targetLocale = parseAcceptLanguage(request && request.headers.get("Accept-Language"));
+  // language they don't speak — translate everything into their saved
+  // reading-language preference; managers who haven't set one yet fall
+  // back to whatever language their browser is set to.
+  const targetLocale = (manager && manager.preferredLocale) || parseAcceptLanguage(request && request.headers.get("Accept-Language"));
   const out = await Promise.all(
     results.map(async (r) => {
       if (!targetLocale) return rowToConversation(r);
@@ -1433,7 +1443,7 @@ export default {
           if (owns.errorResponse) return owns.errorResponse;
           const convoId = parts[4];
           if (!convoId) {
-            if (request.method === "GET") return await listConversations(env, villaId, request);
+            if (request.method === "GET") return await listConversations(env, villaId, request, auth.manager);
             return err(405, "method not allowed");
           }
           const convoSub = parts[5];
