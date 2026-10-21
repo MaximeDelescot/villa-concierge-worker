@@ -220,7 +220,7 @@
   .qr-caption{ margin-top:12px; font-family:'Fraunces',serif; font-size:13px; color:var(--ink-dim); }
 
   /* stats & conversations */
-  .stats-row{ display:grid; grid-template-columns:repeat(3,1fr); gap:12px; }
+  .stats-row{ display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:12px; }
   @media (max-width:640px){ .stats-row{ grid-template-columns:1fr; } }
   .stat-tile{ background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:14px 16px; box-shadow:var(--shadow); }
   .stat-value{ font-family:'Fraunces',serif; font-size:26px; font-variant-numeric:tabular-nums; }
@@ -1218,6 +1218,8 @@
       api.deleteVilla(id).then(reloadVillas);
     }
 
+    var pendingTotal = villas.reduce(function (sum, v) { return sum + (v.pendingCount || 0); }, 0);
+
     return e("div", { className: "page" },
       e("div", { className: "page-head" },
         e("div", null,
@@ -1226,6 +1228,10 @@
         ),
         e(Button, { onClick: function () { setCreating(true); } }, "+ New villa")
       ),
+      villas.length > 0 ? e("div", { className: "stats-row" },
+        e(StatTile, { label: villas.length === 1 ? "Villa" : "Villas", value: villas.length }),
+        e(StatTile, { label: pendingTotal === 1 ? "Conversation awaiting reply" : "Conversations awaiting reply", value: pendingTotal, tone: pendingTotal > 0 ? "warn" : undefined })
+      ) : null,
       villas.length === 0
         ? e(EmptyState, {
             icon: e(IconHome, { size: 30 }), title: "No villas yet",
