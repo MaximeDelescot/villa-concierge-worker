@@ -24,6 +24,8 @@
 //     PATCH  /api/villas/:id                    { name }
 //     DELETE /api/villas/:id
 //     PATCH  /api/villas/:id/checklist         { dismissed: [key, ...] }
+//     POST   /api/villas/:id/cover             (image body) -> { url }
+//     DELETE /api/villas/:id/cover             -> { ok }
 //     GET    /api/villas/:id/knowledge
 //     POST   /api/villas/:id/knowledge          { category, title, content, fields, photos }
 //     PATCH  /api/villas/:id/knowledge/:itemId  { title, content, fields, photos }
@@ -665,6 +667,7 @@ function rowToVilla(r) {
   const out = { id: r.id, name: r.name, slug: r.slug, createdAt: r.created_at, updatedAt: r.updated_at };
   if (r.owner_email) out.ownerEmail = r.owner_email;
   if (r.pending_count !== undefined) out.pendingCount = r.pending_count || 0;
+  out.coverPhotoUrl = r.cover_photo_url || null;
   return out;
 }
 
@@ -713,7 +716,7 @@ async function createVilla(env, manager, body) {
 }
 
 async function getVillaPublic(env, villaId) {
-  const row = await env.DB.prepare("SELECT id, name, slug, created_at, checklist_dismissed FROM villas WHERE id = ?")
+  const row = await env.DB.prepare("SELECT id, name, slug, created_at, checklist_dismissed, cover_photo_url FROM villas WHERE id = ?")
     .bind(villaId)
     .first();
   if (!row) return err(404, "villa not found");
@@ -721,7 +724,10 @@ async function getVillaPublic(env, villaId) {
   try {
     checklistDismissed = JSON.parse(row.checklist_dismissed || "[]");
   } catch (e) {}
-  return json({ id: row.id, name: row.name, slug: row.slug, createdAt: row.created_at, checklistDismissed: checklistDismissed });
+  return json({
+    id: row.id, name: row.name, slug: row.slug, createdAt: row.created_at,
+    checklistDismissed: checklistDismissed, coverPhotoUrl: row.cover_photo_url || null,
+  });
 }
 
 async function updateVillaChecklist(env, villaId, body) {
@@ -891,6 +897,32 @@ function sanitizePhotos(input) {
     if (out.length >= MAX_PHOTOS_PER_ITEM) break;
   }
   return out;
+}
+
+async function uploadVillaCoverPhoto(env, villaId, request) {
+  if (!env.PHOTOS) return err(500, "photo storage is not configured");
+  const contentType = (request.headers.get("content-type") || "").split(";")[0].trim();
+  if (!contentType.startsWith("image/")) return err(400, "expected an image body");
+  const buf = await request.arrayBuffer();
+  if (!buf.byteLength) return err(400, "empty body");
+  if (buf.byteLength > MAX_PHOTO_BYTES) return err(413, "image too large");
+  const ext = contentType === "image/png" ? "png" : contentType === "image/webp" ? "webp" : "jpg";
+  const key = villaId + "/" + newId("cover") + "." + ext;
+  const existing = await env.DB.prepare("SELECT cover_photo_url FROM villas WHERE id = ?").bind(villaId).first();
+  if (!existing) return err(404, "villa not found");
+  await env.PHOTOS.put(key, buf, { httpMetadata: { contentType } });
+  const url = "/img/" + key;
+  await env.DB.prepare("UPDATE villas SET cover_photo_url = ? WHERE id = ?").bind(url, villaId).run();
+  if (existing.cover_photo_url) await deletePhotoFromR2(env, existing.cover_photo_url);
+  return json({ url: url }, 201);
+}
+
+async function deleteVillaCoverPhoto(env, villaId) {
+  const existing = await env.DB.prepare("SELECT cover_photo_url FROM villas WHERE id = ?").bind(villaId).first();
+  if (!existing) return err(404, "villa not found");
+  await env.DB.prepare("UPDATE villas SET cover_photo_url = NULL WHERE id = ?").bind(villaId).run();
+  if (existing.cover_photo_url) await deletePhotoFromR2(env, existing.cover_photo_url);
+  return json({ ok: true });
 }
 
 async function uploadKnowledgePhoto(env, villaId, request) {
@@ -1484,6 +1516,17 @@ export default {
           const owns = await loadVillaForManager(env, villaId, auth.manager);
           if (owns.errorResponse) return owns.errorResponse;
           return await updateVillaChecklist(env, villaId, await readJson(request));
+        }
+
+        // /api/villas/:id/cover  (manager only, own villas)
+        if (sub === "cover") {
+          const auth = await requireAuth(request, env);
+          if (auth.errorResponse) return auth.errorResponse;
+          const owns = await loadVillaForManager(env, villaId, auth.manager);
+          if (owns.errorResponse) return owns.errorResponse;
+          if (request.method === "POST") return await uploadVillaCoverPhoto(env, villaId, request);
+          if (request.method === "DELETE") return await deleteVillaCoverPhoto(env, villaId);
+          return err(405, "method not allowed");
         }
 
         // /api/villas/:id/knowledge[...]  (manager only, own villas)

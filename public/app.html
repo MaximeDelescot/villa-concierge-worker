@@ -123,6 +123,11 @@
   .card{ background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); padding:18px 20px; box-shadow:var(--shadow); }
   .grid-cards{ display:grid; grid-template-columns:repeat(auto-fill, minmax(230px,1fr)); gap:16px; }
   .villa-card{ background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); padding:18px; box-shadow:var(--shadow); cursor:pointer; display:flex; flex-direction:column; gap:8px; transition:box-shadow .15s ease, border-color .15s ease, transform .1s ease; }
+  .villa-card.has-cover{ padding:0; overflow:hidden; gap:0; }
+  .villa-card-cover{ position:relative; height:112px; background-size:cover; background-position:center; background-color:var(--surface-2); }
+  .villa-card-cover .villa-card-cover-delete{ position:absolute; top:8px; right:8px; background:rgba(10,14,11,0.45); color:#fff; backdrop-filter:blur(2px); }
+  .villa-card-cover .villa-card-cover-delete:hover, .villa-card-cover .villa-card-cover-delete.armed{ background:rgba(163,59,50,0.85); color:#fff; }
+  .villa-card-body{ padding:18px; display:flex; flex-direction:column; gap:8px; }
   .villa-card:hover{ border-color:var(--accent); box-shadow:var(--shadow-lg); transform:translateY(-2px); }
   .villa-card-head{ display:flex; align-items:center; justify-content:space-between; }
   .villa-emoji{ color:var(--accent); display:flex; }
@@ -157,6 +162,7 @@
 
   /* knowledge base */
   .essentials-card{ border-left:3px solid var(--accent); }
+  .cover-preview{ width:100%; max-width:280px; height:140px; object-fit:cover; border-radius:10px; border:1px solid var(--border); display:block; }
   .essentials-head{ width:100%; display:flex; align-items:center; justify-content:space-between; gap:10px; background:none; border:none; cursor:pointer; text-align:left; padding:0; font:inherit; color:inherit; }
   .essentials-head-left{ display:flex; align-items:center; gap:10px; flex-wrap:wrap; }
   .essentials-head svg{ flex-shrink:0; transition:transform .15s ease; color:var(--ink-dim); }
@@ -731,6 +737,23 @@
           });
         });
     },
+    uploadVillaCover: function (villaId, blob) {
+      var headers = { "content-type": blob.type || "image/jpeg" };
+      var token = getToken();
+      if (token) headers["authorization"] = "Bearer " + token;
+      return fetch("/api/villas/" + villaId + "/cover", { method: "POST", headers: headers, body: blob })
+        .then(function (res) {
+          return res.json().catch(function () { return {}; }).then(function (data) {
+            if (!res.ok) {
+              var e2 = new Error((data && data.error) || ("HTTP " + res.status));
+              e2.status = res.status;
+              throw e2;
+            }
+            return data;
+          });
+        });
+    },
+    deleteVillaCover: function (villaId) { return apiFetch("/villas/" + villaId + "/cover", { method: "DELETE" }); },
     listConversations: function (villaId) { return apiFetch("/villas/" + villaId + "/conversations"); },
     setConversationHandled: function (villaId, convoId, handled) { return apiFetch("/villas/" + villaId + "/conversations/" + convoId, { method: "PATCH", body: { handled: handled } }); },
     sendManagerReply: function (villaId, convoId, message) { return apiFetch("/villas/" + villaId + "/conversations/" + convoId + "/reply", { method: "POST", body: { message: message } }); },
@@ -1174,11 +1197,12 @@
         });
       } catch (err) {}
     }
-    return e("div", { className: "villa-card", onClick: function () { navigate({ screen: "villa", villa: villa.id, tab: "knowledge" }); } },
-      e("div", { className: "villa-card-head" },
+    var hasCover = !!villa.coverPhotoUrl;
+    var cardContent = e(React.Fragment, null,
+      !hasCover ? e("div", { className: "villa-card-head" },
         e("div", { className: "villa-emoji" }, e(IconHome, { size: 20 })),
         e(ConfirmButton, { onConfirm: function () { onDelete(villa.id); } }, e(IconTrash, { size: 15 }))
-      ),
+      ) : null,
       e("div", { className: "villa-card-title-row" },
         e("h3", { className: "villa-card-title" }, villa.name),
         villa.pendingCount ? e("span", { className: "tab-badge" }, villa.pendingCount) : null
@@ -1189,6 +1213,19 @@
         e(Button, { variant: "ghost", small: true, onClick: copyLink }, copied ? e(React.Fragment, null, e(IconCheck, { size: 13 }), " Copied") : e(React.Fragment, null, e(IconLink, { size: 13 }), " Guest link")),
         e(Button, { variant: "ghost", small: true, onClick: function () { onPreview(villa.id); } }, e(React.Fragment, null, e(IconEye, { size: 13 }), " Test"))
       )
+    );
+    // A cover photo gives each card its own identity at a glance, instead
+    // of every villa showing the same placeholder house icon -- falls
+    // back to the old icon-only header when none has been uploaded yet,
+    // so villas without a photo look exactly as they did before.
+    if (!hasCover) {
+      return e("div", { className: "villa-card", onClick: function () { navigate({ screen: "villa", villa: villa.id, tab: "knowledge" }); } }, cardContent);
+    }
+    return e("div", { className: "villa-card has-cover", onClick: function () { navigate({ screen: "villa", villa: villa.id, tab: "knowledge" }); } },
+      e("div", { className: "villa-card-cover", style: { backgroundImage: "url(" + villa.coverPhotoUrl + ")" } },
+        e(ConfirmButton, { className: "icon-btn danger villa-card-cover-delete", onConfirm: function () { onDelete(villa.id); } }, e(IconTrash, { size: 15 }))
+      ),
+      e("div", { className: "villa-card-body" }, cardContent)
     );
   }
 
@@ -1844,6 +1881,8 @@
     var s1 = useState(villa.name); var name = s1[0], setName = s1[1];
     var s2 = useState(false); var busy = s2[0], setBusy = s2[1];
     var s3 = useState(""); var saved = s3[0], setSaved = s3[1];
+    var s4 = useState(false); var coverUploading = s4[0], setCoverUploading = s4[1];
+    var s5 = useState(""); var coverError = s5[0], setCoverError = s5[1];
 
     function handleSave(ev) {
       ev.preventDefault();
@@ -1853,6 +1892,30 @@
         setBusy(false); setSaved("Saved."); onChanged();
         setTimeout(function () { setSaved(""); }, 1500);
       }).catch(function () { setBusy(false); });
+    }
+
+    function handleCoverFile(ev) {
+      var file = ev.target.files && ev.target.files[0];
+      ev.target.value = "";
+      if (!file) return;
+      setCoverError(""); setCoverUploading(true);
+      compressImage(file, 1200, 0.78).then(function (blob) {
+        return blob.size > 1500000 ? compressImage(file, 800, 0.65) : blob;
+      }).then(function (blob) {
+        return api.uploadVillaCover(villa.id, blob);
+      }).then(function () {
+        setCoverUploading(false);
+        onChanged();
+      }).catch(function () {
+        setCoverUploading(false);
+        setCoverError("Couldn't upload this image.");
+      });
+    }
+    function handleRemoveCover() {
+      setCoverError("");
+      api.deleteVillaCover(villa.id).then(onChanged).catch(function () {
+        setCoverError("Couldn't remove this photo.");
+      });
     }
 
     return e("div", { className: "stack lg" },
@@ -1866,6 +1929,19 @@
             saved ? e("span", { className: "muted small" }, saved) : null
           )
         )
+      ),
+      e("div", { className: "card" },
+        e("h3", { className: "block-title" }, "Cover photo"),
+        e("p", { className: "muted small", style: { marginBottom: "10px" } }, "Shown on this villa's card on your dashboard."),
+        villa.coverPhotoUrl ? e("img", { src: villa.coverPhotoUrl, className: "cover-preview", alt: "" }) : null,
+        e("div", { className: "row gap", style: { marginTop: villa.coverPhotoUrl ? "10px" : 0 } },
+          e("label", { className: "btn btn-ghost", style: { cursor: coverUploading ? "default" : "pointer" } },
+            coverUploading ? "Uploading..." : (villa.coverPhotoUrl ? "Replace photo" : "Upload a photo"),
+            e("input", { type: "file", accept: "image/*", style: { display: "none" }, disabled: coverUploading, onChange: handleCoverFile })
+          ),
+          villa.coverPhotoUrl ? e("button", { type: "button", className: "link-danger", onClick: handleRemoveCover }, "Remove") : null
+        ),
+        coverError ? e("p", { className: "error-text", style: { marginTop: "8px" } }, coverError) : null
       ),
       e("div", { className: "card" },
         e("h3", { className: "block-title" }, "Danger zone"),
