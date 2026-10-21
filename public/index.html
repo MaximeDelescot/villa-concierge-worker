@@ -79,6 +79,7 @@
     --ink-faint: #8b9186;
     --accent: #1f6f5c;
     --accent-ink: #ffffff;
+    --accent-soft: #e4efe9;
     --gold: #b4842a;
     --warn: #b5561f;
     --warn-soft: #f6e4d6;
@@ -98,6 +99,7 @@
       --ink-faint: #727b70;
       --accent: #49b695;
       --accent-ink: #0b1210;
+      --accent-soft: #1e3830;
       --gold: #d9a94b;
       --warn: #e38a52;
       --warn-soft: #3a2a1d;
@@ -117,6 +119,7 @@
     --ink-faint: #727b70;
     --accent: #49b695;
     --accent-ink: #0b1210;
+    --accent-soft: #1e3830;
     --gold: #d9a94b;
     --warn: #e38a52;
     --warn-soft: #3a2a1d;
@@ -554,52 +557,58 @@
 
   .kb-grid {
     margin-top: 28px;
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: 16px;
-    padding: 8px 24px;
     display: grid;
     grid-template-columns: repeat(4, 1fr);
-    column-gap: 24px;
+    gap: 1px;
+    background: var(--border-soft);
+    border: 1px solid var(--border-soft);
+    border-radius: 14px;
+    overflow: hidden;
   }
 
-  .kb-grid-item {
+  .kb-card {
+    background: var(--surface);
+    padding: 18px 20px;
     display: flex;
     align-items: center;
-    gap: 12px;
-    padding-block: 12px;
-    border-bottom: 1px solid var(--border-soft);
-    font-size: 14.5px;
+    gap: 13px;
+    transition: background 0.15s ease;
+  }
+
+  .kb-card:hover { background: color-mix(in srgb, var(--accent) 4%, var(--surface)); }
+
+  .kb-card span:last-child {
+    font-size: 14px;
     font-weight: 500;
     color: var(--ink);
+    line-height: 1.3;
   }
 
-  .kb-grid-item svg.kb-icon {
+  .kb-card-icon {
     flex: none;
-    width: 20px;
-    height: 20px;
+    width: 34px;
+    height: 34px;
+    border-radius: 9px;
+    background: var(--accent-soft);
+    display: flex;
+    align-items: center;
+    justify-content: center;
     color: var(--accent);
-  }
-
-  .kb-grid-item.more {
-    color: var(--ink-faint);
-    font-style: italic;
-  }
-
-  .kb-icon-placeholder {
-    flex: none;
-    width: 17px;
-    text-align: center;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 15px;
     font-weight: 600;
   }
 
-  .kb-grid-item.custom {
-    color: var(--accent);
-    font-weight: 600;
-  }
+  .kb-card-icon svg { width: 17px; height: 17px; display: block; }
+
+  .kb-card-more .kb-card-icon { background: var(--surface-2); color: var(--ink-faint); }
+  .kb-card-more span:last-child { color: var(--ink-faint); font-style: italic; }
+
+  .kb-card-custom .kb-card-icon { background: var(--accent); color: var(--accent-ink); }
+  .kb-card-custom span:last-child { color: var(--accent); font-weight: 600; }
 
   @media (max-width: 760px) {
-    .kb-grid { grid-template-columns: repeat(2, 1fr); padding-inline: 20px; }
+    .kb-grid { grid-template-columns: repeat(2, 1fr); }
   }
 
   @media (max-width: 480px) {
@@ -1135,18 +1144,18 @@
       <p class="section-sub">24 ready-made categories guide every villa — with the right fields already in place for each one, from the WiFi network to emergency contacts. A progress bar shows what's left to complete.</p>
 
       <div class="kb-grid">
-        <div class="kb-grid-item"><svg class="kb-icon" viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 1 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg>Address &amp; location</div>
-        <div class="kb-grid-item"><svg class="kb-icon" viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.55a11 11 0 0 1 14.08 0"></path><path d="M1.42 9a16 16 0 0 1 21.16 0"></path><path d="M8.53 16.11a6 6 0 0 1 6.95 0"></path><line x1="12" y1="20" x2="12.01" y2="20"></line></svg>WiFi</div>
-        <div class="kb-grid-item"><svg class="kb-icon" viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="7" cy="17" r="4"></circle><path d="M10.5 13.5L20 4"></path><path d="M16 8l3 3"></path><path d="M18.5 5.5l3 3"></path></svg>Check-in / Check-out</div>
-        <div class="kb-grid-item"><svg class="kb-icon" viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z"></path></svg>Pool</div>
-        <div class="kb-grid-item"><svg class="kb-icon" viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9.59 4.59A2 2 0 1 1 11 8H2"></path><path d="M12.59 19.41A2 2 0 1 0 14 16H2"></path><path d="M17.73 7.73A2.5 2.5 0 1 1 19.5 12H2"></path></svg>Air conditioning</div>
-        <div class="kb-grid-item"><svg class="kb-icon" viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>Emergency information</div>
-        <div class="kb-grid-item"><svg class="kb-icon" viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"></polyline><polyline points="1 20 1 14 7 14"></polyline><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path></svg>Housekeeping</div>
-        <div class="kb-grid-item"><svg class="kb-icon" viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>Local recommendations</div>
-        <div class="kb-grid-item"><svg class="kb-icon" viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2l8.5 6H3.5z"></path><line x1="5" y1="10" x2="5" y2="20"></line><line x1="9.5" y1="10" x2="9.5" y2="20"></line><line x1="14.5" y1="10" x2="14.5" y2="20"></line><line x1="19" y1="10" x2="19" y2="20"></line><line x1="3" y1="20" x2="21" y2="20"></line></svg>Cultural specifics</div>
-        <div class="kb-grid-item"><svg class="kb-icon" viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"></path></svg>Important contacts</div>
-        <div class="kb-grid-item more"><span class="kb-icon-placeholder">+</span>+ 14 more categories</div>
-        <div class="kb-grid-item custom"><svg class="kb-icon" viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>Custom questions</div>
+        <div class="kb-card"><span class="kb-card-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 1 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg></span><span>Address &amp; location</span></div>
+        <div class="kb-card"><span class="kb-card-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.55a11 11 0 0 1 14.08 0"></path><path d="M1.42 9a16 16 0 0 1 21.16 0"></path><path d="M8.53 16.11a6 6 0 0 1 6.95 0"></path><line x1="12" y1="20" x2="12.01" y2="20"></line></svg></span><span>WiFi</span></div>
+        <div class="kb-card"><span class="kb-card-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="7" cy="17" r="4"></circle><path d="M10.5 13.5L20 4"></path><path d="M16 8l3 3"></path><path d="M18.5 5.5l3 3"></path></svg></span><span>Check-in / Check-out</span></div>
+        <div class="kb-card"><span class="kb-card-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z"></path></svg></span><span>Pool</span></div>
+        <div class="kb-card"><span class="kb-card-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9.59 4.59A2 2 0 1 1 11 8H2"></path><path d="M12.59 19.41A2 2 0 1 0 14 16H2"></path><path d="M17.73 7.73A2.5 2.5 0 1 1 19.5 12H2"></path></svg></span><span>Air conditioning</span></div>
+        <div class="kb-card"><span class="kb-card-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg></span><span>Emergency information</span></div>
+        <div class="kb-card"><span class="kb-card-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"></polyline><polyline points="1 20 1 14 7 14"></polyline><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path></svg></span><span>Housekeeping</span></div>
+        <div class="kb-card"><span class="kb-card-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg></span><span>Local recommendations</span></div>
+        <div class="kb-card"><span class="kb-card-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2l8.5 6H3.5z"></path><line x1="5" y1="10" x2="5" y2="20"></line><line x1="9.5" y1="10" x2="9.5" y2="20"></line><line x1="14.5" y1="10" x2="14.5" y2="20"></line><line x1="19" y1="10" x2="19" y2="20"></line><line x1="3" y1="20" x2="21" y2="20"></line></svg></span><span>Cultural specifics</span></div>
+        <div class="kb-card"><span class="kb-card-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"></path></svg></span><span>Important contacts</span></div>
+        <div class="kb-card kb-card-more"><span class="kb-card-icon">+</span><span>14 more categories</span></div>
+        <div class="kb-card kb-card-custom"><span class="kb-card-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg></span><span>Custom questions</span></div>
       </div>
 
       <div class="kb-progress-demo">
