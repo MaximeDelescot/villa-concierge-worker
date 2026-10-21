@@ -88,6 +88,8 @@
 
   .page{ max-width:960px; margin:0 auto; padding:32px 24px 80px; }
   .page-head{ display:flex; align-items:flex-start; justify-content:space-between; gap:16px; margin-bottom:22px; flex-wrap:wrap; }
+  .page-head-info{ display:flex; align-items:center; gap:14px; }
+  .page-head-thumb{ width:56px; height:56px; border-radius:12px; object-fit:cover; border:1px solid var(--border); flex-shrink:0; }
   .page-title{ font-size:28px; margin-bottom:6px; }
   .page-sub{ color:var(--ink-dim); font-size:14.5px; }
   .link-back{ background:none; border:none; color:var(--ink-dim); font-size:13px; cursor:pointer; padding:0; margin-bottom:14px; display:inline-flex; align-items:center; gap:6px; }
@@ -1977,9 +1979,12 @@
     return e("div", { className: "page" },
       e("button", { className: "link-back", onClick: function () { navigate({ screen: "dashboard" }); } }, e(IconArrowLeft, { size: 13 }), "All villas"),
       e("div", { className: "page-head" },
-        e("div", null,
-          e("h1", { className: "page-title" }, villa.name),
-          e("p", { className: "page-sub" }, "Virtual concierge — available 24/7 for your guests.")
+        e("div", { className: "page-head-info" },
+          villa.coverPhotoUrl ? e("img", { src: villa.coverPhotoUrl, className: "page-head-thumb", alt: "" }) : null,
+          e("div", null,
+            e("h1", { className: "page-title" }, villa.name),
+            e("p", { className: "page-sub" }, "Virtual concierge — available 24/7 for your guests.")
+          )
         )
       ),
       e(Tabs, { tabs: tabs, active: activeTab, onChange: function (id) { navigate({ screen: "villa", villa: villaId, tab: id }, { replace: true }); } }),
