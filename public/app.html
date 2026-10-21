@@ -1385,6 +1385,7 @@
     var s1 = useState(false); var creating = s1[0], setCreating = s1[1];
     var s2 = useState(""); var name = s2[0], setName = s2[1];
     var s3 = useState(false); var busy = s3[0], setBusy = s3[1];
+    var s6 = useState(""); var address = s6[0], setAddress = s6[1];
 
     if (villas === null) return e("div", { className: "page" },
       e("div", { className: "page-head" },
@@ -1398,8 +1399,8 @@
       ev.preventDefault();
       if (!name.trim()) return;
       setBusy(true);
-      api.createVilla({ name: name.trim() }).then(function (villa) {
-        setCreating(false); setName(""); setBusy(false);
+      api.createVilla({ name: name.trim(), address: address.trim() }).then(function (villa) {
+        setCreating(false); setName(""); setAddress(""); setBusy(false);
         navigate({ screen: "villa", villa: villa.id, tab: "knowledge" });
       }).catch(function () { setBusy(false); });
     }
@@ -1445,6 +1446,10 @@
           e(Field, { label: "Villa name" },
             e("input", { className: "input", autoFocus: true, value: name, onChange: function (ev) { setName(ev.target.value); }, placeholder: "e.g. Villa Kembali" })
           ),
+          e(Field, { label: "Address (optional)" },
+            e("input", { className: "input", value: address, onChange: function (ev) { setAddress(ev.target.value); }, placeholder: "e.g. Jl. Pantai Berawa, Canggu, Bali" })
+          ),
+          e("p", { className: "muted small" }, "Used to prefill the Location section and to show destination-relevant suggestions. You can add this later too."),
           e("div", { className: "row gap end" },
             e(Button, { type: "button", variant: "ghost", onClick: function () { setCreating(false); } }, "Cancel"),
             e(Button, { type: "submit", disabled: busy || !name.trim() }, busy ? "Creating..." : "Create")
@@ -1794,12 +1799,18 @@
       handleAddToCategory(es.category, { prefillTitle: es.title, prefillContent: es.content, essentialKey: es.key });
     }
 
+    // No address on file yet -- keep showing the Bali list by default so
+    // existing Bali villas don't lose it just because they haven't typed
+    // an address in. The moment an address is set, only show it if that
+    // address actually looks like Bali.
+    var showBaliEssentials = !villa || !villa.address || /bali/i.test(villa.address);
+
     return e("div", { className: "stack lg" },
-      e(EssentialsGroupCard, {
+      showBaliEssentials ? e(EssentialsGroupCard, {
         villa: villa, items: REGION_ESSENTIALS.bali, onAdd: handleAddEssential, onDismiss: dismissEssential,
         title: "Local recommendations", badge: "📍 Bali-specific",
-        description: "These aren't generic requirements — they're recommendations specific to Bali, based on what guests there commonly need to be told. Villas in other destinations will get their own locally-relevant list here."
-      }),
+        description: "These aren't generic requirements — they're recommendations specific to Bali, based on what guests there commonly need to be told, shown here because this villa's address looks like Bali. Villas in other destinations get their own locally-relevant list here instead."
+      }) : null,
       e(KnowledgeGapsCard, { gaps: gaps, onAddToCategory: handleAddToCategory }),
       e("div", { className: "kb-progress" },
         e("div", { className: "kb-progress-head" },
@@ -1820,7 +1831,13 @@
               adding: addingCat === c.id,
               addPrefillTitle: addingCat === c.id ? addPrefillTitle : null,
               addPrefillContent: addingCat === c.id ? addPrefillContent : null,
-              onAdd: function () { handleAddToCategory(c.id); },
+              onAdd: function () {
+                if (c.id === "location" && villa && villa.address && byCat.location.length === 0) {
+                  handleAddToCategory(c.id, { prefillContent: villa.address });
+                } else {
+                  handleAddToCategory(c.id);
+                }
+              },
               onCancelAdd: handleCancelAdd,
               onAdded: handleItemAdded,
               onChanged: reload,
@@ -2039,12 +2056,13 @@
     var s3 = useState(""); var saved = s3[0], setSaved = s3[1];
     var s4 = useState(false); var coverUploading = s4[0], setCoverUploading = s4[1];
     var s5 = useState(""); var coverError = s5[0], setCoverError = s5[1];
+    var s6 = useState(villa.address || ""); var address = s6[0], setAddress = s6[1];
 
     function handleSave(ev) {
       ev.preventDefault();
       if (!name.trim()) return;
       setBusy(true);
-      api.updateVilla(villa.id, { name: name.trim() }).then(function () {
+      api.updateVilla(villa.id, { name: name.trim(), address: address.trim() }).then(function () {
         setBusy(false); setSaved("Saved."); onChanged();
         setTimeout(function () { setSaved(""); }, 1500);
       }).catch(function () { setBusy(false); });
@@ -2080,6 +2098,10 @@
           e(Field, { label: "Villa name" },
             e("input", { className: "input", value: name, onChange: function (ev) { setName(ev.target.value); } })
           ),
+          e(Field, { label: "Address" },
+            e("input", { className: "input", value: address, onChange: function (ev) { setAddress(ev.target.value); }, placeholder: "e.g. Jl. Pantai Berawa, Canggu, Bali" })
+          ),
+          e("p", { className: "muted small" }, "Prefills the Location section and determines which destination-specific suggestions show up below."),
           e("div", { className: "row gap" },
             e(Button, { type: "submit", disabled: busy || !name.trim() }, busy ? "Saving..." : "Save"),
             saved ? e("span", { className: "muted small" }, saved) : null

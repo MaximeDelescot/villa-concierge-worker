@@ -21,7 +21,7 @@
 //     GET    /api/admin/overview                 -> { stats, managers }  (admin only)
 //     GET    /api/villas
 //     POST   /api/villas                       { name }
-//     PATCH  /api/villas/:id                    { name }
+//     PATCH  /api/villas/:id                    { name, address }
 //     DELETE /api/villas/:id
 //     PATCH  /api/villas/:id/checklist         { dismissed: [key, ...] }
 //     POST   /api/villas/:id/cover             (image body) -> { url }
@@ -40,7 +40,7 @@
 //            replies in their own name, no AI call
 //
 //   Public (no auth — this is what a guest's browser calls):
-//     GET    /api/villas/:id                    -> { id, name, slug, createdAt }
+//     GET    /api/villas/:id                    -> { id, name, slug, createdAt, address }
 //     POST   /api/villas/:id/chat               { sessionId, message } -> { reply, answered, topic }
 //
 // The knowledge base itself (WiFi passwords, etc.) is NEVER sent to the
@@ -673,6 +673,7 @@ function rowToVilla(r) {
   if (r.owner_email) out.ownerEmail = r.owner_email;
   if (r.pending_count !== undefined) out.pendingCount = r.pending_count || 0;
   out.coverPhotoUrl = r.cover_photo_url || null;
+  out.address = r.address || null;
   return out;
 }
 
@@ -710,18 +711,24 @@ async function adminOverview(env) {
 async function createVilla(env, manager, body) {
   const name = (body.name || "").trim();
   if (!name) return err(400, "name is required");
+  // The address is optional at creation time (we don't want to slow down
+  // spinning up a new villa) -- it powers two things once set: a prefill
+  // for the "Location" knowledge item, and auto-detecting whether this
+  // villa is in Bali so the Bali-specific suggestion card only shows up
+  // where it's actually relevant. See EssentialsGroupCard on the frontend.
+  const address = (body.address || "").trim() || null;
   const id = newId("villa");
   const ts = nowIso();
   await env.DB.prepare(
-    "INSERT INTO villas (id, name, slug, manager_id, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?)"
+    "INSERT INTO villas (id, name, slug, address, manager_id, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?)"
   )
-    .bind(id, name, slugify(name), manager.id, ts, ts)
+    .bind(id, name, slugify(name), address, manager.id, ts, ts)
     .run();
-  return json({ id, name, slug: slugify(name), createdAt: ts, updatedAt: ts }, 201);
+  return json({ id, name, slug: slugify(name), address, createdAt: ts, updatedAt: ts }, 201);
 }
 
 async function getVillaPublic(env, villaId) {
-  const row = await env.DB.prepare("SELECT id, name, slug, created_at, checklist_dismissed, cover_photo_url FROM villas WHERE id = ?")
+  const row = await env.DB.prepare("SELECT id, name, slug, created_at, checklist_dismissed, cover_photo_url, address FROM villas WHERE id = ?")
     .bind(villaId)
     .first();
   if (!row) return err(404, "villa not found");
@@ -732,6 +739,7 @@ async function getVillaPublic(env, villaId) {
   return json({
     id: row.id, name: row.name, slug: row.slug, createdAt: row.created_at,
     checklistDismissed: checklistDismissed, coverPhotoUrl: row.cover_photo_url || null,
+    address: row.address || null,
   });
 }
 
@@ -749,9 +757,10 @@ async function updateVillaChecklist(env, villaId, body) {
 async function updateVilla(env, villaId, body) {
   const name = (body.name || "").trim();
   if (!name) return err(400, "name is required");
+  const address = (body.address || "").trim() || null;
   const ts = nowIso();
-  const res = await env.DB.prepare("UPDATE villas SET name = ?, slug = ?, updated_at = ? WHERE id = ?")
-    .bind(name, slugify(name), ts, villaId)
+  const res = await env.DB.prepare("UPDATE villas SET name = ?, slug = ?, address = ?, updated_at = ? WHERE id = ?")
+    .bind(name, slugify(name), address, ts, villaId)
     .run();
   if (!res.meta.changes) return err(404, "villa not found");
   return json({ ok: true });
