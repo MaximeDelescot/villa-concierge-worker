@@ -359,7 +359,15 @@
     { id: "transport", label: "Transport", emoji: "🚗" },
     { id: "contacts", label: "Important contacts", emoji: "📇" },
     { id: "emergency", label: "Emergency information", emoji: "🚨" },
-    { id: "custom", label: "Custom questions", emoji: "💬" }
+    { id: "custom", label: "Custom questions", emoji: "💬" },
+    // Promoted from the old dismissible "Essential knowledge" suggestion
+    // card to real categories -- guests ask about these at essentially
+    // every rental, anywhere, so they belong alongside WiFi or Pool, not
+    // behind an optional Add/dismiss flow.
+    { id: "hot_water", label: "Hot water", emoji: "🚿" },
+    { id: "staff_schedule", label: "On-site staff schedule", emoji: "🧑‍🔧" },
+    { id: "deposit_policy", label: "Security deposit & payment", emoji: "💰" },
+    { id: "quiet_hours", label: "Noise & quiet hours", emoji: "🤫" }
   ];
   var CAT_BY_ID = {};
   CATEGORIES.forEach(function (c) { CAT_BY_ID[c.id] = c; });
@@ -372,9 +380,9 @@
   // "rules" items underneath).
   var CATEGORY_GROUPS = [
     { label: "Essentials", categories: ["general", "location", "checkinout", "wifi"] },
-    { label: "Villa & amenities", categories: ["equipment", "appliances", "ac", "entertainment", "pool"] },
-    { label: "Rules & security", categories: ["rules", "pets", "emergency"] },
-    { label: "Services & housekeeping", categories: ["services", "housekeeping"] },
+    { label: "Villa & amenities", categories: ["equipment", "appliances", "ac", "entertainment", "pool", "hot_water"] },
+    { label: "Rules & security", categories: ["rules", "pets", "emergency", "deposit_policy", "quiet_hours"] },
+    { label: "Services & housekeeping", categories: ["services", "housekeeping", "staff_schedule"] },
     { label: "Local area", categories: ["recommendations", "supermarkets", "beaches", "transport"] },
     { label: "Contacts & other", categories: ["contacts", "custom"] }
   ];
@@ -390,6 +398,30 @@
   };
   var RECOMMENDATION_TYPES = ["Restaurant", "Bar / Rooftop", "Café", "Cultural visit", "Activity / Excursion", "Wellness", "Shopping", "Other"];
   var CATEGORY_TEMPLATES = {
+    hot_water: {
+      addLabel: "a note about hot water",
+      fields: [{ key: "content", label: "Details", type: "textarea", placeholder: "e.g. Switch on the water heater a few minutes before showering for hot water." }],
+      title: function () { return "Hot water"; },
+      content: function (v) { return v.content || ""; }
+    },
+    staff_schedule: {
+      addLabel: "a note about on-site staff",
+      fields: [{ key: "content", label: "Details", type: "textarea", placeholder: "e.g. Housekeeper comes Mon/Wed/Fri 9am–1pm. Contact via WhatsApp at +62..." }],
+      title: function () { return "On-site staff schedule"; },
+      content: function (v) { return v.content || ""; }
+    },
+    deposit_policy: {
+      addLabel: "a note about the deposit",
+      fields: [{ key: "content", label: "Details", type: "textarea", placeholder: "e.g. $200 cash on arrival, refunded within 48h after check-out." }],
+      title: function () { return "Security deposit & payment"; },
+      content: function (v) { return v.content || ""; }
+    },
+    quiet_hours: {
+      addLabel: "a note about quiet hours",
+      fields: [{ key: "content", label: "Details", type: "textarea", placeholder: "e.g. Please keep noise down after 10pm out of respect for neighbors." }],
+      title: function () { return "Noise & quiet hours"; },
+      content: function (v) { return v.content || ""; }
+    },
     recommendations: {
       addLabel: "a recommendation",
       fields: [
@@ -1381,16 +1413,6 @@
     ]
   };
 
-  // Not tied to any destination -- every rental anywhere benefits from
-  // these being spelled out, so they're suggested for every villa without
-  // the "Bali-specific" framing above.
-  var GENERAL_ESSENTIALS = [
-    { key: "water_heater", category: "appliances", title: "Hot water / water heater", hint: "Many villas need the heater switched on a few minutes before a hot shower works." },
-    { key: "staff_schedule", category: "housekeeping", title: "On-site staff schedule", hint: "Guests aren't used to staff coming and going — say who, when, and how to reach them." },
-    { key: "deposit_policy", category: "rules", title: "Security deposit & payment", hint: "Avoid surprises at checkout — spell out the deposit amount and accepted payment methods." },
-    { key: "quiet_hours", category: "rules", title: "Noise & quiet hours", hint: "Especially relevant near residential neighborhoods — set expectations upfront." }
-  ];
-
   // Shared by both essentials cards below -- one badged as region-specific,
   // one not. Collapsed by default: a dozen hint paragraphs on every page
   // load is more than a manager needs to see before deciding to even look.
@@ -1530,11 +1552,6 @@
     }
 
     return e("div", { className: "stack lg" },
-      e(EssentialsGroupCard, {
-        villa: villa, items: GENERAL_ESSENTIALS, onAdd: handleAddEssential, onDismiss: dismissEssential,
-        title: "General suggestions", badge: null,
-        description: "Common gaps for any vacation rental, anywhere. Add what applies to your villa, dismiss what doesn't."
-      }),
       e(EssentialsGroupCard, {
         villa: villa, items: REGION_ESSENTIALS.bali, onAdd: handleAddEssential, onDismiss: dismissEssential,
         title: "Local recommendations", badge: "📍 Bali-specific",

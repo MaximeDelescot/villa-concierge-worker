@@ -407,6 +407,12 @@ const CATEGORY_LABELS = {
   contacts: "Contacts importants",
   emergency: "Informations d'urgence",
   custom: "Questions personnalisées",
+  // Added as their own categories (not a dismissible suggestion) because
+  // guests ask about them at essentially every rental, anywhere.
+  hot_water: "Eau chaude",
+  staff_schedule: "Personnel sur place",
+  deposit_policy: "Caution et paiement",
+  quiet_hours: "Bruit et horaires de silence",
 };
 const CATEGORY_ORDER = Object.keys(CATEGORY_LABELS);
 
