@@ -122,15 +122,14 @@
   /* cards & grid */
   .card{ background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); padding:18px 20px; box-shadow:var(--shadow); }
   .grid-cards{ display:grid; grid-template-columns:repeat(auto-fill, minmax(230px,1fr)); gap:16px; }
-  .villa-card{ background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); padding:18px; box-shadow:var(--shadow); cursor:pointer; display:flex; flex-direction:column; gap:8px; transition:box-shadow .15s ease, border-color .15s ease, transform .1s ease; }
-  .villa-card.has-cover{ padding:0; overflow:hidden; gap:0; }
+  .villa-card{ background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); padding:0; overflow:hidden; box-shadow:var(--shadow); cursor:pointer; display:flex; flex-direction:column; transition:box-shadow .15s ease, border-color .15s ease, transform .1s ease; }
   .villa-card-cover{ position:relative; height:112px; background-size:cover; background-position:center; background-color:var(--surface-2); }
+  .villa-card-cover.placeholder{ background:var(--accent-soft); display:flex; align-items:center; justify-content:center; }
+  .villa-card-cover-icon{ color:var(--accent); opacity:.55; }
   .villa-card-cover .villa-card-cover-delete{ position:absolute; top:8px; right:8px; background:rgba(10,14,11,0.45); color:#fff; backdrop-filter:blur(2px); }
   .villa-card-cover .villa-card-cover-delete:hover, .villa-card-cover .villa-card-cover-delete.armed{ background:rgba(163,59,50,0.85); color:#fff; }
   .villa-card-body{ padding:18px; display:flex; flex-direction:column; gap:8px; }
   .villa-card:hover{ border-color:var(--accent); box-shadow:var(--shadow-lg); transform:translateY(-2px); }
-  .villa-card-head{ display:flex; align-items:center; justify-content:space-between; }
-  .villa-emoji{ color:var(--accent); display:flex; }
   .villa-card-title{ font-size:17px; }
   .villa-card-meta{ color:var(--ink-faint); font-size:12.5px; margin-bottom:4px; }
 
@@ -1198,34 +1197,29 @@
       } catch (err) {}
     }
     var hasCover = !!villa.coverPhotoUrl;
-    var cardContent = e(React.Fragment, null,
-      !hasCover ? e("div", { className: "villa-card-head" },
-        e("div", { className: "villa-emoji" }, e(IconHome, { size: 20 })),
-        e(ConfirmButton, { onConfirm: function () { onDelete(villa.id); } }, e(IconTrash, { size: 15 }))
-      ) : null,
-      e("div", { className: "villa-card-title-row" },
-        e("h3", { className: "villa-card-title" }, villa.name),
-        villa.pendingCount ? e("span", { className: "tab-badge" }, villa.pendingCount) : null
-      ),
-      e("p", { className: "villa-card-meta" }, "Created " + formatDate(villa.createdAt)),
-      villa.ownerEmail ? e("p", { className: "villa-card-meta" }, "Manager: " + villa.ownerEmail) : null,
-      e("div", { className: "row gap", onClick: function (ev) { ev.stopPropagation(); } },
-        e(Button, { variant: "ghost", small: true, onClick: copyLink }, copied ? e(React.Fragment, null, e(IconCheck, { size: 13 }), " Copied") : e(React.Fragment, null, e(IconLink, { size: 13 }), " Guest link")),
-        e(Button, { variant: "ghost", small: true, onClick: function () { onPreview(villa.id); } }, e(React.Fragment, null, e(IconEye, { size: 13 }), " Test"))
-      )
-    );
-    // A cover photo gives each card its own identity at a glance, instead
-    // of every villa showing the same placeholder house icon -- falls
-    // back to the old icon-only header when none has been uploaded yet,
-    // so villas without a photo look exactly as they did before.
-    if (!hasCover) {
-      return e("div", { className: "villa-card", onClick: function () { navigate({ screen: "villa", villa: villa.id, tab: "knowledge" }); } }, cardContent);
-    }
-    return e("div", { className: "villa-card has-cover", onClick: function () { navigate({ screen: "villa", villa: villa.id, tab: "knowledge" }); } },
-      e("div", { className: "villa-card-cover", style: { backgroundImage: "url(" + villa.coverPhotoUrl + ")" } },
+    // Every card gets the same banner slot -- a real photo once uploaded,
+    // or a plain tinted placeholder until then -- so the grid stays even
+    // instead of mixing taller "has a photo" cards with shorter plain ones.
+    return e("div", { className: "villa-card", onClick: function () { navigate({ screen: "villa", villa: villa.id, tab: "knowledge" }); } },
+      e("div", {
+        className: "villa-card-cover" + (hasCover ? "" : " placeholder"),
+        style: hasCover ? { backgroundImage: "url(" + villa.coverPhotoUrl + ")" } : null
+      },
+        !hasCover ? e("div", { className: "villa-card-cover-icon" }, e(IconHome, { size: 24 })) : null,
         e(ConfirmButton, { className: "icon-btn danger villa-card-cover-delete", onConfirm: function () { onDelete(villa.id); } }, e(IconTrash, { size: 15 }))
       ),
-      e("div", { className: "villa-card-body" }, cardContent)
+      e("div", { className: "villa-card-body" },
+        e("div", { className: "villa-card-title-row" },
+          e("h3", { className: "villa-card-title" }, villa.name),
+          villa.pendingCount ? e("span", { className: "tab-badge" }, villa.pendingCount) : null
+        ),
+        e("p", { className: "villa-card-meta" }, "Created " + formatDate(villa.createdAt)),
+        villa.ownerEmail ? e("p", { className: "villa-card-meta" }, "Manager: " + villa.ownerEmail) : null,
+        e("div", { className: "row gap", onClick: function (ev) { ev.stopPropagation(); } },
+          e(Button, { variant: "ghost", small: true, onClick: copyLink }, copied ? e(React.Fragment, null, e(IconCheck, { size: 13 }), " Copied") : e(React.Fragment, null, e(IconLink, { size: 13 }), " Guest link")),
+          e(Button, { variant: "ghost", small: true, onClick: function () { onPreview(villa.id); } }, e(React.Fragment, null, e(IconEye, { size: 13 }), " Test"))
+        )
+      )
     );
   }
 
