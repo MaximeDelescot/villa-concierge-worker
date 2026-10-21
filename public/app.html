@@ -812,7 +812,7 @@
 
   function seedDemoVilla() {
     function mk(catId, fields) { return Object.assign({ category: catId }, materializeFields(catId, fields)); }
-    return api.createVilla({ name: "Villa Kembali (demo)" }).then(function (villa) {
+    return api.createVilla({ name: "Villa Kembali (demo)", address: "Jl. Pantai Berawa No. 88, Canggu, Bali 80361, Indonesia" }).then(function (villa) {
       var items = [
         mk("location", { title: "Address", content: "Jl. Pantai Berawa No. 88, Canggu, Bali 80361, Indonesia. A 5-minute walk from Berawa Beach." }),
         mk("checkinout", { checkIn: "14:00", checkOut: "11:00", lateCheckout: "" }),
