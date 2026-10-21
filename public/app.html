@@ -161,7 +161,8 @@
   .essential-row:first-child{ padding-top:0; }
   .essential-row:last-child{ border-bottom:none; padding-bottom:0; }
   .essential-row-body{ min-width:0; }
-  .essential-row-label{ font-weight:600; font-size:13.5px; display:block; margin-bottom:2px; }
+  .essential-row-label{ font-weight:600; font-size:13.5px; display:flex; align-items:center; gap:6px; margin-bottom:2px; color:var(--ink); }
+  .essential-row-label svg{ color:var(--ink-dim); flex-shrink:0; }
   .essential-row-hint{ color:var(--ink-dim); font-size:12.5px; line-height:1.45; margin:0; }
   .essential-row-actions{ display:flex; align-items:center; gap:12px; flex-shrink:0; padding-top:1px; }
   .link-muted{ background:none; border:none; color:var(--ink-faint); font-size:12.5px; cursor:pointer; padding:0; white-space:nowrap; }
@@ -171,7 +172,8 @@
   .gap-row:first-child{ padding-top:0; }
   .gap-row:last-child{ border-bottom:none; padding-bottom:0; }
   .gap-row-head{ display:flex; align-items:center; gap:10px; }
-  .gap-row-label{ font-weight:600; font-size:13.5px; flex:1; }
+  .gap-row-label{ font-weight:600; font-size:13.5px; flex:1; display:flex; align-items:center; gap:6px; }
+  .gap-row-label svg{ color:var(--ink-dim); flex-shrink:0; }
   .gap-row-count{ font-size:11.5px; font-weight:700; color:var(--warn); background:var(--warn-soft); padding:2px 9px; border-radius:20px; white-space:nowrap; }
   .gap-examples{ margin:0; padding-left:18px; color:var(--ink-dim); font-size:12.5px; line-height:1.5; }
   .gap-examples li{ margin-bottom:2px; }
@@ -183,7 +185,7 @@
   .cat-section{ border:1px solid var(--border); border-radius:12px; background:var(--surface); box-shadow:var(--shadow); overflow:hidden; }
   .cat-header{ width:100%; display:flex; align-items:center; gap:10px; padding:13px 16px; background:none; border:none; cursor:pointer; text-align:left; transition:background .15s ease; }
   .cat-header:hover{ background:var(--surface-2); }
-  .cat-emoji{ font-size:17px; }
+  .cat-icon{ display:flex; align-items:center; color:var(--ink-dim); flex-shrink:0; }
   .cat-label{ font-weight:600; flex:1; font-size:14px; }
   .cat-count{ background:var(--surface-2); color:var(--ink-dim); font-size:11.5px; font-weight:700; padding:2px 8px; border-radius:20px; }
   .cat-count.empty{ background:transparent; color:var(--ink-faint); }
@@ -340,34 +342,34 @@
   // Categories (unchanged from the original design)
   // ---------------------------------------------------------------------
   var CATEGORIES = [
-    { id: "general", label: "General information", emoji: "🏡" },
-    { id: "location", label: "Address & location", emoji: "📍" },
-    { id: "checkinout", label: "Check-in / Check-out", emoji: "🔑" },
-    { id: "wifi", label: "WiFi", emoji: "📶" },
-    { id: "rules", label: "Villa rules", emoji: "📋" },
-    { id: "pets", label: "Pets", emoji: "🐾" },
-    { id: "equipment", label: "Equipment", emoji: "🛠️" },
-    { id: "appliances", label: "Appliances", emoji: "🧺" },
-    { id: "ac", label: "Air conditioning", emoji: "❄️" },
-    { id: "entertainment", label: "TV / Entertainment", emoji: "📺" },
-    { id: "pool", label: "Pool", emoji: "🏊" },
-    { id: "services", label: "Available services", emoji: "🛎️" },
-    { id: "housekeeping", label: "Housekeeping", emoji: "🧹" },
-    { id: "recommendations", label: "Local recommendations", emoji: "⭐" },
-    { id: "supermarkets", label: "Supermarkets", emoji: "🛒" },
-    { id: "beaches", label: "Beaches", emoji: "🏖️" },
-    { id: "transport", label: "Transport", emoji: "🚗" },
-    { id: "contacts", label: "Important contacts", emoji: "📇" },
-    { id: "emergency", label: "Emergency information", emoji: "🚨" },
-    { id: "custom", label: "Custom questions", emoji: "💬" },
+    { id: "general", label: "General information", icon: IconInfo },
+    { id: "location", label: "Address & location", icon: IconMapPin },
+    { id: "checkinout", label: "Check-in / Check-out", icon: IconKey },
+    { id: "wifi", label: "WiFi", icon: IconWifi },
+    { id: "rules", label: "Villa rules", icon: IconClipboard },
+    { id: "pets", label: "Pets", icon: IconPaw },
+    { id: "equipment", label: "Equipment", icon: IconTool },
+    { id: "appliances", label: "Appliances", icon: IconBox },
+    { id: "ac", label: "Air conditioning", icon: IconWind },
+    { id: "entertainment", label: "TV / Entertainment", icon: IconTv },
+    { id: "pool", label: "Pool", icon: IconDroplet },
+    { id: "services", label: "Available services", icon: IconBell },
+    { id: "housekeeping", label: "Housekeeping", icon: IconRefreshCw },
+    { id: "recommendations", label: "Local recommendations", icon: IconStar },
+    { id: "supermarkets", label: "Supermarkets", icon: IconShoppingCart },
+    { id: "beaches", label: "Beaches", icon: IconSun },
+    { id: "transport", label: "Transport", icon: IconTruck },
+    { id: "contacts", label: "Important contacts", icon: IconPhone },
+    { id: "emergency", label: "Emergency information", icon: IconAlertTriangle },
+    { id: "custom", label: "Custom questions", icon: IconMessageSquare },
     // Promoted from the old dismissible "Essential knowledge" suggestion
     // card to real categories -- guests ask about these at essentially
     // every rental, anywhere, so they belong alongside WiFi or Pool, not
     // behind an optional Add/dismiss flow.
-    { id: "hot_water", label: "Hot water", emoji: "🚿" },
-    { id: "staff_schedule", label: "On-site staff schedule", emoji: "🧑‍🔧" },
-    { id: "deposit_policy", label: "Security deposit & payment", emoji: "💰" },
-    { id: "quiet_hours", label: "Noise & quiet hours", emoji: "🤫" }
+    { id: "hot_water", label: "Hot water", icon: IconThermometer },
+    { id: "staff_schedule", label: "On-site staff schedule", icon: IconClock },
+    { id: "deposit_policy", label: "Security deposit & payment", icon: IconDollarSign },
+    { id: "quiet_hours", label: "Noise & quiet hours", icon: IconMoon }
   ];
   var CAT_BY_ID = {};
   CATEGORIES.forEach(function (c) { CAT_BY_ID[c.id] = c; });
@@ -1115,6 +1117,34 @@
   function IconArrowLeft(props) { return e(Icon, props, e("line", { x1: 19, y1: 12, x2: 5, y2: 12 }), e("polyline", { points: "12 19 5 12 12 5" })); }
   function IconArrowRight(props) { return e(Icon, props, e("line", { x1: 5, y1: 12, x2: 19, y2: 12 }), e("polyline", { points: "12 5 19 12 12 19" })); }
 
+  // One SVG icon per knowledge-base category, same stroke-icon system as
+  // everywhere else in the app (and the whole icon set above) -- replaces
+  // the emoji that used to sit next to each category name, which looked
+  // different on every OS and never adapted to dark mode.
+  function IconInfo(props) { return e(Icon, props, e("circle", { cx: 12, cy: 12, r: 10 }), e("line", { x1: 12, y1: 16, x2: 12, y2: 12 }), e("line", { x1: 12, y1: 8, x2: 12.01, y2: 8 })); }
+  function IconMapPin(props) { return e(Icon, props, e("path", { d: "M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 1 1 18 0z" }), e("circle", { cx: 12, cy: 10, r: 3 })); }
+  function IconKey(props) { return e(Icon, props, e("circle", { cx: 7, cy: 17, r: 4 }), e("path", { d: "M10.5 13.5L20 4" }), e("path", { d: "M16 8l3 3" }), e("path", { d: "M18.5 5.5l3 3" })); }
+  function IconWifi(props) { return e(Icon, props, e("path", { d: "M5 12.55a11 11 0 0 1 14.08 0" }), e("path", { d: "M1.42 9a16 16 0 0 1 21.16 0" }), e("path", { d: "M8.53 16.11a6 6 0 0 1 6.95 0" }), e("line", { x1: 12, y1: 20, x2: 12.01, y2: 20 })); }
+  function IconClipboard(props) { return e(Icon, props, e("path", { d: "M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2" }), e("rect", { x: 8, y: 2, width: 8, height: 4, rx: 1, ry: 1 })); }
+  function IconPaw(props) { return e(Icon, props, e("circle", { cx: 7.5, cy: 9.5, r: 1.6 }), e("circle", { cx: 12, cy: 7, r: 1.6 }), e("circle", { cx: 16.5, cy: 9.5, r: 1.6 }), e("circle", { cx: 18.3, cy: 14, r: 1.6 }), e("path", { d: "M12 14.2c-3.2 0-5.4 2-5.4 4.4 0 1.7 1.5 2.4 3 1.7.8-.4 1.6-.6 2.4-.6s1.6.2 2.4.6c1.5.7 3 0 3-1.7 0-2.4-2.2-4.4-5.4-4.4z" })); }
+  function IconTool(props) { return e(Icon, props, e("path", { d: "M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z" })); }
+  function IconBox(props) { return e(Icon, props, e("path", { d: "M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z" }), e("polyline", { points: "3.27 6.96 12 12.01 20.73 6.96" }), e("line", { x1: 12, y1: 22.08, x2: 12, y2: 12 })); }
+  function IconWind(props) { return e(Icon, props, e("path", { d: "M9.59 4.59A2 2 0 1 1 11 8H2" }), e("path", { d: "M12.59 19.41A2 2 0 1 0 14 16H2" }), e("path", { d: "M17.73 7.73A2.5 2.5 0 1 1 19.5 12H2" })); }
+  function IconTv(props) { return e(Icon, props, e("rect", { x: 2, y: 7, width: 20, height: 15, rx: 2, ry: 2 }), e("polyline", { points: "17 2 12 7 7 2" })); }
+  function IconDroplet(props) { return e(Icon, props, e("path", { d: "M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z" })); }
+  function IconRefreshCw(props) { return e(Icon, props, e("polyline", { points: "23 4 23 10 17 10" }), e("polyline", { points: "1 20 1 14 7 14" }), e("path", { d: "M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15" })); }
+  function IconStar(props) { return e(Icon, props, e("polygon", { points: "12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" })); }
+  function IconShoppingCart(props) { return e(Icon, props, e("circle", { cx: 9, cy: 21, r: 1 }), e("circle", { cx: 20, cy: 21, r: 1 }), e("path", { d: "M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6" })); }
+  function IconSun(props) { return e(Icon, props, e("circle", { cx: 12, cy: 12, r: 5 }), e("line", { x1: 12, y1: 1, x2: 12, y2: 3 }), e("line", { x1: 12, y1: 21, x2: 12, y2: 23 }), e("line", { x1: 4.22, y1: 4.22, x2: 5.64, y2: 5.64 }), e("line", { x1: 18.36, y1: 18.36, x2: 19.78, y2: 19.78 }), e("line", { x1: 1, y1: 12, x2: 3, y2: 12 }), e("line", { x1: 21, y1: 12, x2: 23, y2: 12 }), e("line", { x1: 4.22, y1: 19.78, x2: 5.64, y2: 18.36 }), e("line", { x1: 18.36, y1: 5.64, x2: 19.78, y2: 4.22 })); }
+  function IconTruck(props) { return e(Icon, props, e("rect", { x: 1, y: 3, width: 15, height: 13 }), e("polygon", { points: "16 8 20 8 23 11 23 16 16 16 16 8" }), e("circle", { cx: 5.5, cy: 18.5, r: 2.5 }), e("circle", { cx: 18.5, cy: 18.5, r: 2.5 })); }
+  function IconPhone(props) { return e(Icon, props, e("path", { d: "M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z" })); }
+  function IconAlertTriangle(props) { return e(Icon, props, e("path", { d: "M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" }), e("line", { x1: 12, y1: 9, x2: 12, y2: 13 }), e("line", { x1: 12, y1: 17, x2: 12.01, y2: 17 })); }
+  function IconThermometer(props) { return e(Icon, props, e("path", { d: "M14 14.76V3.5a2.5 2.5 0 0 0-5 0v11.26a4.5 4.5 0 1 0 5 0z" })); }
+  function IconClock(props) { return e(Icon, props, e("circle", { cx: 12, cy: 12, r: 10 }), e("polyline", { points: "12 6 12 12 16 14" })); }
+  function IconDollarSign(props) { return e(Icon, props, e("line", { x1: 12, y1: 1, x2: 12, y2: 23 }), e("path", { d: "M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" })); }
+  function IconMoon(props) { return e(Icon, props, e("path", { d: "M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" })); }
+
+
   // ---------------------------------------------------------------------
   // Dashboard
   // ---------------------------------------------------------------------
@@ -1365,7 +1395,7 @@
     var tmpl = templateForCategory(cat.id);
     return e("div", { id: "cat-" + cat.id, className: "cat-section" + (open ? " open" : "") },
       e("button", { className: "cat-header", onClick: props.onToggle },
-        e("span", { className: "cat-emoji" }, cat.emoji),
+        e("span", { className: "cat-icon" }, e(cat.icon, { size: 16 })),
         e("span", { className: "cat-label" }, cat.label),
         e("span", { className: "cat-count" + (items.length === 0 ? " empty" : "") }, items.length),
         e("span", { className: "cat-chevron" }, open ? e(IconChevronDown, { size: 14 }) : e(IconChevronRight, { size: 14 }))
@@ -1436,7 +1466,7 @@
         var cat = CAT_BY_ID[es.category];
         return e("div", { key: es.key, className: "essential-row" },
           e("div", { className: "essential-row-body" },
-            e("span", { className: "essential-row-label" }, (cat ? cat.emoji + " " : "") + es.title),
+            e("span", { className: "essential-row-label" }, cat ? e(cat.icon, { size: 14 }) : null, es.title),
             e("p", { className: "essential-row-hint" }, es.hint)
           ),
           e("div", { className: "essential-row-actions" },
@@ -1485,7 +1515,7 @@
         var label = cat ? cat.label : "Other";
         return e("div", { key: g.topic, className: "gap-row" },
           e("div", { className: "gap-row-head" },
-            e("span", { className: "gap-row-label" }, (cat ? cat.emoji + " " : "") + label),
+            e("span", { className: "gap-row-label" }, cat ? e(cat.icon, { size: 14 }) : null, label),
             e("span", { className: "gap-row-count" }, g.count + (g.count > 1 ? " guests" : " guest")),
             e(Button, { variant: "ghost", small: true, onClick: function () { props.onAddToCategory(g.topic === "other" ? "custom" : g.topic); } }, "Add info")
           ),
