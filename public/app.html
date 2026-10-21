@@ -153,6 +153,15 @@
   .villa-card-title-row{ display:flex; align-items:center; gap:8px; }
 
   /* knowledge base */
+  .gaps-card{ border-left:3px solid var(--warn); }
+  .gap-row{ display:flex; flex-direction:column; gap:6px; padding:10px 0; border-bottom:1px solid var(--border); }
+  .gap-row:first-child{ padding-top:0; }
+  .gap-row:last-child{ border-bottom:none; padding-bottom:0; }
+  .gap-row-head{ display:flex; align-items:center; gap:10px; }
+  .gap-row-label{ font-weight:600; font-size:13.5px; flex:1; }
+  .gap-row-count{ font-size:11.5px; font-weight:700; color:var(--warn); background:var(--warn-soft); padding:2px 9px; border-radius:20px; white-space:nowrap; }
+  .gap-examples{ margin:0; padding-left:18px; color:var(--ink-dim); font-size:12.5px; line-height:1.5; }
+  .gap-examples li{ margin-bottom:2px; }
   .kb-progress{ display:flex; flex-direction:column; gap:6px; font-size:12.5px; color:var(--ink-dim); }
   .progress-bar{ height:6px; background:var(--surface-2); border-radius:4px; overflow:hidden; }
   .progress-fill{ height:100%; background:var(--accent); border-radius:4px; }
@@ -1280,7 +1289,7 @@
   function CategorySection(props) {
     var cat = props.cat, items = props.items, open = props.open;
     var tmpl = templateForCategory(cat.id);
-    return e("div", { className: "cat-section" + (open ? " open" : "") },
+    return e("div", { id: "cat-" + cat.id, className: "cat-section" + (open ? " open" : "") },
       e("button", { className: "cat-header", onClick: props.onToggle },
         e("span", { className: "cat-emoji" }, cat.emoji),
         e("span", { className: "cat-label" }, cat.label),
@@ -1299,9 +1308,59 @@
     );
   }
 
+  // Every assistant reply the AI flagged as "answered: false" means a
+  // guest asked something this villa's knowledge base doesn't cover yet.
+  // Grouping those by topic (the same fixed categories as the knowledge
+  // base itself) turns real guest questions into a to-do list for the
+  // manager, instead of a chart only an AI vendor would find interesting.
+  function computeKnowledgeGaps(convos) {
+    var gaps = {};
+    (convos || []).forEach(function (c) {
+      var msgs = c.messages || [];
+      msgs.forEach(function (m, idx) {
+        if (m.role !== "assistant" || m.answered !== false) return;
+        var t = m.topic || "other";
+        if (!gaps[t]) gaps[t] = { topic: t, count: 0, examples: [] };
+        gaps[t].count++;
+        var prevUser = null;
+        for (var j = idx - 1; j >= 0; j--) {
+          if (msgs[j].role === "user") { prevUser = msgs[j].content; break; }
+        }
+        if (prevUser && gaps[t].examples.indexOf(prevUser) === -1 && gaps[t].examples.length < 3) {
+          gaps[t].examples.push(prevUser);
+        }
+      });
+    });
+    return Object.keys(gaps).map(function (k) { return gaps[k]; }).sort(function (a, b) { return b.count - a.count; });
+  }
+
+  function KnowledgeGapsCard(props) {
+    var gaps = props.gaps;
+    if (!gaps.length) return null;
+    return e("div", { className: "card gaps-card" },
+      e("h3", { className: "block-title" }, "Knowledge gaps"),
+      e("p", { className: "muted small" }, "Questions your concierge couldn't answer, grouped by topic — add the missing info and it's ready for the next guest."),
+      e("div", { className: "stack" }, gaps.map(function (g) {
+        var cat = CAT_BY_ID[g.topic];
+        var label = cat ? cat.label : "Other";
+        return e("div", { key: g.topic, className: "gap-row" },
+          e("div", { className: "gap-row-head" },
+            e("span", { className: "gap-row-label" }, (cat ? cat.emoji + " " : "") + label),
+            e("span", { className: "gap-row-count" }, g.count + (g.count > 1 ? " guests" : " guest")),
+            e(Button, { variant: "ghost", small: true, onClick: function () { props.onAddToCategory(g.topic === "other" ? "custom" : g.topic); } }, "Add info")
+          ),
+          g.examples.length ? e("ul", { className: "gap-examples" }, g.examples.map(function (ex, i) {
+            return e("li", { key: i }, "\u201C" + ex + "\u201D");
+          })) : null
+        );
+      }))
+    );
+  }
+
   function KnowledgeEditor(props) {
     var villaId = props.villaId;
     var kn = useKnowledge(true, villaId); var items = kn[0], reload = kn[1];
+    var cs = useConversations(true, villaId); var convos = cs[0];
     var s1 = useState(null); var openCat = s1[0], setOpenCat = s1[1];
     var s2 = useState(null); var addingCat = s2[0], setAddingCat = s2[1];
 
@@ -1309,8 +1368,18 @@
     var byCat = {};
     CATEGORIES.forEach(function (c) { byCat[c.id] = items.filter(function (i) { return i.category === c.id; }); });
     var filledCount = CATEGORIES.filter(function (c) { return byCat[c.id].length > 0; }).length;
+    var gaps = convos ? computeKnowledgeGaps(convos) : [];
+    function handleAddToCategory(catId) {
+      setOpenCat(catId);
+      setAddingCat(catId);
+      setTimeout(function () {
+        var el = document.getElementById("cat-" + catId);
+        if (el) el.scrollIntoView({ behavior: "smooth", block: "center" });
+      }, 50);
+    }
 
     return e("div", { className: "stack lg" },
+      e(KnowledgeGapsCard, { gaps: gaps, onAddToCategory: handleAddToCategory }),
       e("div", { className: "kb-progress" },
         e("span", null, filledCount + " / " + CATEGORIES.length + " categories filled in"),
         e("div", { className: "progress-bar" }, e("div", { className: "progress-fill", style: { width: Math.round(filledCount / CATEGORIES.length * 100) + "%" } }))
