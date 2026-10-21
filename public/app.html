@@ -1386,6 +1386,8 @@
     var s2 = useState(""); var name = s2[0], setName = s2[1];
     var s3 = useState(false); var busy = s3[0], setBusy = s3[1];
     var s6 = useState(""); var address = s6[0], setAddress = s6[1];
+    var s7 = useState(null); var coverFile = s7[0], setCoverFile = s7[1];
+    var s8 = useState(""); var coverPreview = s8[0], setCoverPreview = s8[1];
 
     if (villas === null) return e("div", { className: "page" },
       e("div", { className: "page-head" },
@@ -1395,12 +1397,41 @@
       e(SkeletonVillaCards)
     );
 
+    function handleCoverPick(ev) {
+      var file = ev.target.files && ev.target.files[0];
+      ev.target.value = "";
+      if (!file) return;
+      if (coverPreview) URL.revokeObjectURL(coverPreview);
+      setCoverFile(file);
+      setCoverPreview(URL.createObjectURL(file));
+    }
+    function handleCoverClear() {
+      if (coverPreview) URL.revokeObjectURL(coverPreview);
+      setCoverFile(null);
+      setCoverPreview("");
+    }
+    function resetCreateForm() {
+      setCreating(false); setName(""); setAddress("");
+      if (coverPreview) URL.revokeObjectURL(coverPreview);
+      setCoverFile(null); setCoverPreview("");
+    }
     function handleCreate(ev) {
       ev.preventDefault();
       if (!name.trim()) return;
       setBusy(true);
       api.createVilla({ name: name.trim(), address: address.trim() }).then(function (villa) {
-        setCreating(false); setName(""); setAddress(""); setBusy(false);
+        if (!coverFile) return villa;
+        return compressImage(coverFile, 1200, 0.78).then(function (blob) {
+          return blob.size > 1500000 ? compressImage(coverFile, 800, 0.65) : blob;
+        }).then(function (blob) {
+          return api.uploadVillaCover(villa.id, blob);
+        }).catch(function () {
+          // Villa creation already succeeded -- a cover-upload hiccup
+          // shouldn't block it. The manager can just add it from Settings.
+        }).then(function () { return villa; });
+      }).then(function (villa) {
+        setBusy(false);
+        resetCreateForm();
         navigate({ screen: "villa", villa: villa.id, tab: "knowledge" });
       }).catch(function () { setBusy(false); });
     }
@@ -1441,7 +1472,7 @@
         : e("div", { className: "grid-cards" }, villas.map(function (v) {
             return e(VillaCard, { key: v.id, villa: v, navigate: navigate, onPreview: onPreview, onDelete: handleDelete });
           })),
-      creating && e(Modal, { title: "New villa", onClose: function () { setCreating(false); } },
+      creating && e(Modal, { title: "New villa", onClose: resetCreateForm },
         e("form", { className: "stack", onSubmit: handleCreate },
           e(Field, { label: "Villa name" },
             e("input", { className: "input", autoFocus: true, value: name, onChange: function (ev) { setName(ev.target.value); }, placeholder: "e.g. Villa Kembali" })
@@ -1450,8 +1481,20 @@
             e("input", { className: "input", value: address, onChange: function (ev) { setAddress(ev.target.value); }, placeholder: "e.g. Jl. Pantai Berawa, Canggu, Bali" })
           ),
           e("p", { className: "muted small" }, "Used to prefill the Location section and to show destination-relevant suggestions. You can add this later too."),
+          e(Field, { label: "Cover photo (optional)" },
+            e("div", null,
+              coverPreview ? e("img", { src: coverPreview, className: "cover-preview", alt: "" }) : null,
+              e("div", { className: "row gap", style: { marginTop: coverPreview ? "10px" : 0 } },
+                e("label", { className: "btn btn-ghost", style: { cursor: "pointer" } },
+                  coverPreview ? "Replace photo" : "Upload a photo",
+                  e("input", { type: "file", accept: "image/*", style: { display: "none" }, onChange: handleCoverPick })
+                ),
+                coverPreview ? e("button", { type: "button", className: "link-danger", onClick: handleCoverClear }, "Remove") : null
+              )
+            )
+          ),
           e("div", { className: "row gap end" },
-            e(Button, { type: "button", variant: "ghost", onClick: function () { setCreating(false); } }, "Cancel"),
+            e(Button, { type: "button", variant: "ghost", onClick: resetCreateForm }, "Cancel"),
             e(Button, { type: "submit", disabled: busy || !name.trim() }, busy ? "Creating..." : "Create")
           )
         )
