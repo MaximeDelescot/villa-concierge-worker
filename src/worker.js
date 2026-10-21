@@ -404,7 +404,7 @@ const CATEGORY_LABELS = {
   housekeeping: "Housekeeping",
   recommendations: "Recommandations locales",
   supermarkets: "Supermarchés",
-  beaches: "Plages",
+  attractions: "Points d’intérêt",
   transport: "Transports",
   contacts: "Contacts importants",
   emergency: "Informations d'urgence",
@@ -415,6 +415,11 @@ const CATEGORY_LABELS = {
   staff_schedule: "Personnel sur place",
   deposit_policy: "Caution et paiement",
   quiet_hours: "Bruit et horaires de silence",
+  // Local culture and customs (e.g. canang sari offerings, Nyepi) --
+  // destination-specific, unlike the four above, but distinct enough from
+  // general practical info to deserve its own category rather than being
+  // buried in "general".
+  cultural: "Spécificités culturelles",
 };
 const CATEGORY_ORDER = Object.keys(CATEGORY_LABELS);
 
