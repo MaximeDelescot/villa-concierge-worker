@@ -1228,7 +1228,7 @@
         ),
         e(Button, { onClick: function () { setCreating(true); } }, "+ New villa")
       ),
-      villas.length > 0 ? e("div", { className: "stats-row" },
+      villas.length > 0 ? e("div", { className: "stats-row", style: { marginBottom: "22px" } },
         e(StatTile, { label: villas.length === 1 ? "Villa" : "Villas", value: villas.length }),
         e(StatTile, { label: pendingTotal === 1 ? "Conversation awaiting reply" : "Conversations awaiting reply", value: pendingTotal, tone: pendingTotal > 0 ? "warn" : undefined })
       ) : null,
