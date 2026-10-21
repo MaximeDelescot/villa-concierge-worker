@@ -153,6 +153,16 @@
   .villa-card-title-row{ display:flex; align-items:center; gap:8px; }
 
   /* knowledge base */
+  .essentials-card{ border-left:3px solid var(--accent); }
+  .essential-row{ display:flex; align-items:flex-start; justify-content:space-between; gap:14px; padding:10px 0; border-bottom:1px solid var(--border); }
+  .essential-row:first-child{ padding-top:0; }
+  .essential-row:last-child{ border-bottom:none; padding-bottom:0; }
+  .essential-row-body{ min-width:0; }
+  .essential-row-label{ font-weight:600; font-size:13.5px; display:block; margin-bottom:2px; }
+  .essential-row-hint{ color:var(--ink-dim); font-size:12.5px; line-height:1.45; margin:0; }
+  .essential-row-actions{ display:flex; align-items:center; gap:12px; flex-shrink:0; padding-top:1px; }
+  .link-muted{ background:none; border:none; color:var(--ink-faint); font-size:12.5px; cursor:pointer; padding:0; white-space:nowrap; }
+  .link-muted:hover{ color:var(--ink-dim); }
   .gaps-card{ border-left:3px solid var(--warn); }
   .gap-row{ display:flex; flex-direction:column; gap:6px; padding:10px 0; border-bottom:1px solid var(--border); }
   .gap-row:first-child{ padding-top:0; }
@@ -665,7 +675,8 @@
     updateProfile: function (data) { return apiFetch("/auth/me", { method: "PATCH", body: data }); },
     forgotPassword: function (email) { return apiFetch("/auth/forgot-password", { method: "POST", body: { email: email } }); },
     resetPassword: function (token, password) { return apiFetch("/auth/reset-password", { method: "POST", body: { token: token, password: password } }); },
-    adminOverview: function () { return apiFetch("/admin/overview"); }
+    adminOverview: function () { return apiFetch("/admin/overview"); },
+    updateVillaChecklist: function (villaId, dismissed) { return apiFetch("/villas/" + villaId + "/checklist", { method: "PATCH", body: { dismissed: dismissed } }); }
   };
 
   function seedDemoVilla() {
@@ -1174,7 +1185,15 @@
   function KnowledgeItemForm(props) {
     var villaId = props.villaId, category = props.category, initial = props.initial;
     var tmpl = templateForCategory(category);
-    var s1 = useState(function () { return initialValuesFor(tmpl, initial); }); var values = s1[0], setValues = s1[1];
+    var s1 = useState(function () {
+      var v = initialValuesFor(tmpl, initial);
+      // Only for a genuinely new item (no `initial`, so this can never be
+      // mistaken for editing an existing one) — pre-fills just the first
+      // field with a suggested title, nothing else, so the manager still
+      // writes the actual villa-specific details themselves.
+      if (!initial && props.prefillTitle && tmpl.fields[0]) v[tmpl.fields[0].key] = props.prefillTitle;
+      return v;
+    }); var values = s1[0], setValues = s1[1];
     var s3 = useState(function () {
       return (initial && Array.isArray(initial.photos))
         ? initial.photos.slice(0, MAX_KB_PHOTOS).map(function (p) { return { url: p.url, caption: p.caption || "" }; })
@@ -1302,9 +1321,50 @@
           return e(KnowledgeItemRow, { key: it.id, item: it, villaId: props.villaId, onChanged: props.onChanged });
         }),
         props.adding
-          ? e(KnowledgeItemForm, { villaId: props.villaId, category: cat.id, onDone: function () { props.onCancelAdd(); props.onChanged(); }, onCancel: props.onCancelAdd })
+          ? e(KnowledgeItemForm, { villaId: props.villaId, category: cat.id, prefillTitle: props.addPrefillTitle, onDone: props.onAdded, onCancel: props.onCancelAdd })
           : e(Button, { variant: "ghost", small: true, onClick: props.onAdd }, "+ Add " + (tmpl.addLabel || "an item"))
       ) : null
+    );
+  }
+
+  // Commonly-missed topics for a Bali villa specifically, not covered by
+  // the fixed categories being merely "non-empty". Suggested proactively,
+  // before a guest ever has to ask and expose the gap the hard way.
+  var VILLA_ESSENTIALS = [
+    { key: "drinking_water", category: "general", title: "Drinking water", hint: "Tap water isn't safe to drink in Indonesia — most international guests don't know this." },
+    { key: "power_outages", category: "general", title: "Power outages", hint: "Bali has occasional PLN power cuts — say whether there's a backup generator." },
+    { key: "offerings_etiquette", category: "general", title: "Canang sari offerings", hint: "Small daily offerings left on the ground are part of local ritual — guests should know not to step on them." },
+    { key: "nyepi", category: "general", title: "Nyepi (Day of Silence)", hint: "If the stay overlaps Nyepi, guests must stay indoors for 24h with no lights or noise — worth flagging well ahead of time." },
+    { key: "mosquitoes", category: "general", title: "Mosquitoes & dengue", hint: "A quick note on repellent goes a long way — dengue is present in Bali." },
+    { key: "water_heater", category: "appliances", title: "Hot water / water heater", hint: "Many villas need the heater switched on a few minutes before a hot shower works." },
+    { key: "gas_canister", category: "appliances", title: "Cooking gas", hint: "LPG gas canisters can run out mid-cooking — explain what to do and who to call." },
+    { key: "scooter_rental", category: "transport", title: "Scooter rental", hint: "Most guests want to rent a scooter — say where, and that an international license is technically required." },
+    { key: "ride_apps", category: "transport", title: "Ride & delivery apps", hint: "Gojek and Grab are how everyone gets around and orders food — worth a mention for first-time visitors." },
+    { key: "staff_schedule", category: "housekeeping", title: "On-site staff schedule", hint: "Guests aren't used to staff coming and going — say who, when, and how to reach them." },
+    { key: "deposit_policy", category: "rules", title: "Security deposit & payment", hint: "Avoid surprises at checkout — spell out the deposit amount and accepted payment methods." },
+    { key: "quiet_hours", category: "rules", title: "Noise & quiet hours", hint: "Especially relevant near residential neighborhoods — set expectations upfront." }
+  ];
+
+  function EssentialsChecklistCard(props) {
+    var dismissed = (props.villa && props.villa.checklistDismissed) || [];
+    var remaining = VILLA_ESSENTIALS.filter(function (es) { return dismissed.indexOf(es.key) === -1; });
+    if (!remaining.length) return null;
+    return e("div", { className: "card essentials-card" },
+      e("h3", { className: "block-title" }, "Bali essentials checklist"),
+      e("p", { className: "muted small" }, "Topics guests at Bali villas commonly need that are easy to forget. Add what applies to your villa, dismiss what doesn't."),
+      e("div", { className: "stack" }, remaining.map(function (es) {
+        var cat = CAT_BY_ID[es.category];
+        return e("div", { key: es.key, className: "essential-row" },
+          e("div", { className: "essential-row-body" },
+            e("span", { className: "essential-row-label" }, (cat ? cat.emoji + " " : "") + es.title),
+            e("p", { className: "essential-row-hint" }, es.hint)
+          ),
+          e("div", { className: "essential-row-actions" },
+            e(Button, { variant: "ghost", small: true, onClick: function () { props.onAdd(es); } }, "Add"),
+            e("button", { type: "button", className: "link-muted", onClick: function () { props.onDismiss(es.key); } }, "Not applicable")
+          )
+        );
+      }))
     );
   }
 
@@ -1358,27 +1418,57 @@
   }
 
   function KnowledgeEditor(props) {
-    var villaId = props.villaId;
+    var villaId = props.villaId, villa = props.villa, onVillaChanged = props.onVillaChanged;
     var kn = useKnowledge(true, villaId); var items = kn[0], reload = kn[1];
     var cs = useConversations(true, villaId); var convos = cs[0];
     var s1 = useState(null); var openCat = s1[0], setOpenCat = s1[1];
     var s2 = useState(null); var addingCat = s2[0], setAddingCat = s2[1];
+    var s3 = useState(null); var addPrefillTitle = s3[0], setAddPrefillTitle = s3[1];
+    var s4 = useState(null); var addEssentialKey = s4[0], setAddEssentialKey = s4[1];
 
     if (items === null) return e(LoadingBlock);
     var byCat = {};
     CATEGORIES.forEach(function (c) { byCat[c.id] = items.filter(function (i) { return i.category === c.id; }); });
     var filledCount = CATEGORIES.filter(function (c) { return byCat[c.id].length > 0; }).length;
     var gaps = convos ? computeKnowledgeGaps(convos) : [];
-    function handleAddToCategory(catId) {
+
+    function dismissEssential(key) {
+      var current = (villa && villa.checklistDismissed) || [];
+      if (current.indexOf(key) !== -1) return;
+      api.updateVillaChecklist(villaId, current.concat([key]))
+        .then(function () { if (onVillaChanged) onVillaChanged(); })
+        .catch(function () {});
+    }
+    function handleAddToCategory(catId, opts) {
+      opts = opts || {};
       setOpenCat(catId);
       setAddingCat(catId);
+      setAddPrefillTitle(opts.prefillTitle || null);
+      setAddEssentialKey(opts.essentialKey || null);
       setTimeout(function () {
         var el = document.getElementById("cat-" + catId);
         if (el) el.scrollIntoView({ behavior: "smooth", block: "center" });
       }, 50);
     }
+    function handleCancelAdd() {
+      setAddingCat(null);
+      setAddPrefillTitle(null);
+      setAddEssentialKey(null);
+    }
+    function handleItemAdded() {
+      var key = addEssentialKey;
+      setAddingCat(null);
+      setAddPrefillTitle(null);
+      setAddEssentialKey(null);
+      if (key) dismissEssential(key);
+      reload();
+    }
+    function handleAddEssential(es) {
+      handleAddToCategory(es.category, { prefillTitle: es.title, essentialKey: es.key });
+    }
 
     return e("div", { className: "stack lg" },
+      e(EssentialsChecklistCard, { villa: villa, onAdd: handleAddEssential, onDismiss: dismissEssential }),
       e(KnowledgeGapsCard, { gaps: gaps, onAddToCategory: handleAddToCategory }),
       e("div", { className: "kb-progress" },
         e("span", null, filledCount + " / " + CATEGORIES.length + " categories filled in"),
@@ -1389,8 +1479,10 @@
           key: c.id, cat: c, items: byCat[c.id],
           open: openCat === c.id, onToggle: function () { setOpenCat(openCat === c.id ? null : c.id); },
           adding: addingCat === c.id,
-          onAdd: function () { setAddingCat(c.id); setOpenCat(c.id); },
-          onCancelAdd: function () { setAddingCat(null); },
+          addPrefillTitle: addingCat === c.id ? addPrefillTitle : null,
+          onAdd: function () { handleAddToCategory(c.id); },
+          onCancelAdd: handleCancelAdd,
+          onAdded: handleItemAdded,
           onChanged: reload,
           villaId: villaId
         });
@@ -1673,7 +1765,7 @@
       ),
       e(Tabs, { tabs: tabs, active: activeTab, onChange: function (id) { navigate({ screen: "villa", villa: villaId, tab: id }, { replace: true }); } }),
       e("div", { className: "tab-panel" },
-        activeTab === "knowledge" ? e(KnowledgeEditor, { villaId: villaId }) : null,
+        activeTab === "knowledge" ? e(KnowledgeEditor, { villaId: villaId, villa: villa, onVillaChanged: reloadVilla }) : null,
         activeTab === "qr" ? e(QrPanel, { villa: villa, onPreview: onPreview }) : null,
         activeTab === "conversations" ? e(ConversationsPanel, { villaId: villaId, initialConvoId: props.convo }) : null,
         activeTab === "settings" ? e(SettingsPanel, { villa: villa, navigate: navigate, onChanged: reloadVilla }) : null

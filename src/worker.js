@@ -23,6 +23,7 @@
 //     POST   /api/villas                       { name }
 //     PATCH  /api/villas/:id                    { name }
 //     DELETE /api/villas/:id
+//     PATCH  /api/villas/:id/checklist         { dismissed: [key, ...] }
 //     GET    /api/villas/:id/knowledge
 //     POST   /api/villas/:id/knowledge          { category, title, content, fields, photos }
 //     PATCH  /api/villas/:id/knowledge/:itemId  { title, content, fields, photos }
@@ -706,11 +707,26 @@ async function createVilla(env, manager, body) {
 }
 
 async function getVillaPublic(env, villaId) {
-  const row = await env.DB.prepare("SELECT id, name, slug, created_at FROM villas WHERE id = ?")
+  const row = await env.DB.prepare("SELECT id, name, slug, created_at, checklist_dismissed FROM villas WHERE id = ?")
     .bind(villaId)
     .first();
   if (!row) return err(404, "villa not found");
-  return json({ id: row.id, name: row.name, slug: row.slug, createdAt: row.created_at });
+  let checklistDismissed = [];
+  try {
+    checklistDismissed = JSON.parse(row.checklist_dismissed || "[]");
+  } catch (e) {}
+  return json({ id: row.id, name: row.name, slug: row.slug, createdAt: row.created_at, checklistDismissed: checklistDismissed });
+}
+
+async function updateVillaChecklist(env, villaId, body) {
+  const dismissed = Array.isArray(body.dismissed)
+    ? body.dismissed.filter((k) => typeof k === "string").slice(0, 100)
+    : [];
+  const res = await env.DB.prepare("UPDATE villas SET checklist_dismissed = ? WHERE id = ?")
+    .bind(JSON.stringify(dismissed), villaId)
+    .run();
+  if (!res.meta.changes) return err(404, "villa not found");
+  return json({ ok: true, checklistDismissed: dismissed });
 }
 
 async function updateVilla(env, villaId, body) {
@@ -1453,6 +1469,15 @@ export default {
         // guest resume their own conversation after a page reload)
         if (sub === "session" && parts[4] && request.method === "GET") {
           return await getSession(env, villaId, parts[4]);
+        }
+
+        // /api/villas/:id/checklist  (manager only, own villas)
+        if (sub === "checklist" && request.method === "PATCH") {
+          const auth = await requireAuth(request, env);
+          if (auth.errorResponse) return auth.errorResponse;
+          const owns = await loadVillaForManager(env, villaId, auth.manager);
+          if (owns.errorResponse) return owns.errorResponse;
+          return await updateVillaChecklist(env, villaId, await readJson(request));
         }
 
         // /api/villas/:id/knowledge[...]  (manager only, own villas)
