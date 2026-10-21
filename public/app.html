@@ -18,6 +18,7 @@
     --ink:#1B211C; --ink-dim:#5C6259; --ink-faint:#8B9186;
     --accent:#1F6F5C; --accent-ink:#0F3B30; --accent-soft:#E4EFE9; --accent-contrast:#FFFFFF;
     --gold:#B4842A;
+    --cat-indigo:#4A4F8C; --cat-sage:#66762E; --cat-sky:#2C7A96; --cat-plum:#85486F;
     --warn:#B5561F; --warn-soft:#F6E4D6;
     --good:#1F6F5C; --good-soft:#E4EFE9;
     --danger:#A33B32; --danger-soft:#F5E1DE;
@@ -32,6 +33,7 @@
       --ink:#EDEEE9; --ink-dim:#A6AEA3; --ink-faint:#727B70;
       --accent:#49B695; --accent-ink:#CFF0E4; --accent-soft:#1E3830; --accent-contrast:#0B1210;
       --gold:#D9A94B;
+      --cat-indigo:#9FA4E0; --cat-sage:#A8C06C; --cat-sky:#6FC4DE; --cat-plum:#D298C0;
       --warn:#E38A52; --warn-soft:#3A2A1D;
       --good:#49B695; --good-soft:#1E3830;
       --danger:#E4776C; --danger-soft:#3B2320;
@@ -45,6 +47,7 @@
     --ink:#EDEEE9; --ink-dim:#A6AEA3; --ink-faint:#727B70;
     --accent:#49B695; --accent-ink:#CFF0E4; --accent-soft:#1E3830; --accent-contrast:#0B1210;
     --gold:#D9A94B;
+    --cat-indigo:#9FA4E0; --cat-sage:#A8C06C; --cat-sky:#6FC4DE; --cat-plum:#D298C0;
     --warn:#E38A52; --warn-soft:#3A2A1D;
     --good:#49B695; --good-soft:#1E3830;
     --danger:#E4776C; --danger-soft:#3B2320;
@@ -381,13 +384,21 @@
   // alongside the villa's house rules, even though both are still plain
   // "rules" items underneath).
   var CATEGORY_GROUPS = [
-    { label: "Essentials", categories: ["general", "location", "checkinout", "wifi"] },
-    { label: "Villa & amenities", categories: ["equipment", "appliances", "ac", "entertainment", "pool", "hot_water"] },
-    { label: "Rules & security", categories: ["rules", "pets", "emergency", "deposit_policy", "quiet_hours"] },
-    { label: "Services & housekeeping", categories: ["services", "housekeeping", "staff_schedule"] },
-    { label: "Local area", categories: ["recommendations", "supermarkets", "beaches", "transport"] },
-    { label: "Contacts & other", categories: ["contacts", "custom"] }
+    { label: "Essentials", categories: ["general", "location", "checkinout", "wifi"], color: "var(--accent)" },
+    { label: "Villa & amenities", categories: ["equipment", "appliances", "ac", "entertainment", "pool", "hot_water"], color: "var(--gold)" },
+    { label: "Rules & security", categories: ["rules", "pets", "emergency", "deposit_policy", "quiet_hours"], color: "var(--cat-indigo)" },
+    { label: "Services & housekeeping", categories: ["services", "housekeeping", "staff_schedule"], color: "var(--cat-sage)" },
+    { label: "Local area", categories: ["recommendations", "supermarkets", "beaches", "transport"], color: "var(--cat-sky)" },
+    { label: "Contacts & other", categories: ["contacts", "custom"], color: "var(--cat-plum)" }
   ];
+  // One muted accent color per group above, carried onto each category's
+  // icon -- a light touch of color to tell sections apart at a glance,
+  // without turning the page into a rainbow (still just 6 tones from the
+  // existing earthy palette, never the --warn/--danger status colors so
+  // nothing accidentally reads as an alert).
+  CATEGORY_GROUPS.forEach(function (g) {
+    g.categories.forEach(function (id) { if (CAT_BY_ID[id]) CAT_BY_ID[id].color = g.color; });
+  });
 
   var DEFAULT_TEMPLATE = {
     addLabel: "an item",
@@ -1395,7 +1406,7 @@
     var tmpl = templateForCategory(cat.id);
     return e("div", { id: "cat-" + cat.id, className: "cat-section" + (open ? " open" : "") },
       e("button", { className: "cat-header", onClick: props.onToggle },
-        e("span", { className: "cat-icon" }, e(cat.icon, { size: 16 })),
+        e("span", { className: "cat-icon" }, e(cat.icon, { size: 16, style: { color: cat.color } })),
         e("span", { className: "cat-label" }, cat.label),
         e("span", { className: "cat-count" + (items.length === 0 ? " empty" : "") }, items.length),
         e("span", { className: "cat-chevron" }, open ? e(IconChevronDown, { size: 14 }) : e(IconChevronRight, { size: 14 }))
@@ -1466,7 +1477,7 @@
         var cat = CAT_BY_ID[es.category];
         return e("div", { key: es.key, className: "essential-row" },
           e("div", { className: "essential-row-body" },
-            e("span", { className: "essential-row-label" }, cat ? e(cat.icon, { size: 14 }) : null, es.title),
+            e("span", { className: "essential-row-label" }, cat ? e(cat.icon, { size: 14, style: { color: cat.color } }) : null, es.title),
             e("p", { className: "essential-row-hint" }, es.hint)
           ),
           e("div", { className: "essential-row-actions" },
@@ -1515,7 +1526,7 @@
         var label = cat ? cat.label : "Other";
         return e("div", { key: g.topic, className: "gap-row" },
           e("div", { className: "gap-row-head" },
-            e("span", { className: "gap-row-label" }, cat ? e(cat.icon, { size: 14 }) : null, label),
+            e("span", { className: "gap-row-label" }, cat ? e(cat.icon, { size: 14, style: { color: cat.color } }) : null, label),
             e("span", { className: "gap-row-count" }, g.count + (g.count > 1 ? " guests" : " guest")),
             e(Button, { variant: "ghost", small: true, onClick: function () { props.onAddToCategory(g.topic === "other" ? "custom" : g.topic); } }, "Add info")
           ),
