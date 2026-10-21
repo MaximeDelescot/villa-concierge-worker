@@ -140,6 +140,9 @@
   .loading-block{ display:flex; justify-content:center; padding:60px 0; }
   .spinner{ width:26px; height:26px; border-radius:50%; border:3px solid var(--border); border-top-color:var(--accent); animation:spin .7s linear infinite; }
   @keyframes spin{ to{ transform:rotate(360deg); } }
+  .skel{ background:var(--surface-2); border-radius:6px; animation:skel-pulse 1.4s ease-in-out infinite; }
+  @keyframes skel-pulse{ 0%,100%{ opacity:.5; } 50%{ opacity:1; } }
+  @media (prefers-reduced-motion: reduce){ .skel{ animation:none; opacity:.75; } }
 
   /* form fields */
   .field{ display:flex; flex-direction:column; gap:6px; font-size:13px; }
@@ -1098,6 +1101,111 @@
   }
   function Spinner() { return e("div", { className: "spinner" }); }
   function LoadingBlock() { return e("div", { className: "loading-block" }, e(Spinner)); }
+
+  function Skel(props) {
+    return e("div", { className: "skel", style: Object.assign({ width: props.w, height: props.h || "12px" }, props.style || {}) });
+  }
+  function SkeletonStatsRow(props) {
+    var n = props.count || 3;
+    var tiles = [];
+    for (var i = 0; i < n; i++) {
+      tiles.push(e("div", { key: i, className: "stat-tile" },
+        e(Skel, { w: "36px", h: "24px", style: { marginBottom: "6px" } }),
+        e(Skel, { w: "65%", h: "10px" })
+      ));
+    }
+    return e("div", { className: "stats-row" }, tiles);
+  }
+  // Mirrors VillaCard's shape (banner + title + meta + two buttons) so
+  // the dashboard doesn't jump around once the real cards replace these.
+  function SkeletonVillaCards() {
+    var cards = [0, 1, 2].map(function (i) {
+      return e("div", { key: i, className: "villa-card" },
+        e(Skel, { w: "100%", h: "112px", style: { borderRadius: 0 } }),
+        e("div", { className: "villa-card-body" },
+          e(Skel, { w: "55%", h: "16px" }),
+          e(Skel, { w: "38%", h: "11px" }),
+          e("div", { className: "row gap" }, e(Skel, { w: "92px", h: "26px", style: { borderRadius: "8px" } }), e(Skel, { w: "68px", h: "26px", style: { borderRadius: "8px" } }))
+        )
+      );
+    });
+    return e("div", { className: "grid-cards" }, cards);
+  }
+  // Mirrors a collapsed CategorySection row (icon + label + chevron).
+  function SkeletonCategoryRows(props) {
+    var n = props.count || 7;
+    var widths = ["52%", "38%", "60%", "44%", "35%", "48%", "40%"];
+    var rows = [];
+    for (var i = 0; i < n; i++) {
+      rows.push(e("div", { key: i, className: "cat-section" },
+        e("div", { className: "cat-header", style: { cursor: "default" } },
+          e(Skel, { w: "16px", h: "16px", style: { borderRadius: "4px", flexShrink: 0 } }),
+          e(Skel, { w: widths[i % widths.length], h: "13px" })
+        )
+      ));
+    }
+    return e("div", { className: "stack" }, rows);
+  }
+  function SkeletonKnowledgeBase() {
+    return e("div", { className: "stack lg" },
+      e("div", { className: "kb-progress" },
+        e(Skel, { w: "140px", h: "13px" }),
+        e(Skel, { w: "100%", h: "6px" })
+      ),
+      e(SkeletonCategoryRows, { count: 8 })
+    );
+  }
+  // Mirrors a ConversationRow (avatar + two text lines).
+  function SkeletonConversationRows(props) {
+    var n = props.count || 4;
+    var widths = ["58%", "46%", "64%", "50%"];
+    var rows = [];
+    for (var i = 0; i < n; i++) {
+      rows.push(e("div", { key: i, className: "card", style: { display: "flex", alignItems: "center", gap: "12px" } },
+        e(Skel, { w: "34px", h: "34px", style: { borderRadius: "50%", flexShrink: 0 } }),
+        e("div", { style: { flex: 1 } },
+          e(Skel, { w: widths[i % widths.length], h: "12px", style: { marginBottom: "6px" } }),
+          e(Skel, { w: "28%", h: "10px" })
+        )
+      ));
+    }
+    return e("div", { className: "stack" }, rows);
+  }
+  function SkeletonConversationsPanel() {
+    return e("div", { className: "stack lg" },
+      e(SkeletonStatsRow, { count: 3 }),
+      e(SkeletonConversationRows, { count: 4 })
+    );
+  }
+  // Mirrors AdminPanel's stats + table.
+  function SkeletonAdminPanel() {
+    var rows = [0, 1, 2, 3].map(function (i) {
+      return e("tr", { key: i },
+        e("td", null, e(Skel, { w: "150px", h: "11px" })),
+        e("td", null, e(Skel, { w: "80px", h: "11px" })),
+        e("td", null, e(Skel, { w: "30px", h: "11px" }))
+      );
+    });
+    return e("div", { className: "stack lg" },
+      e(SkeletonStatsRow, { count: 3 }),
+      e("div", { className: "card" }, e("table", { className: "admin-table" }, e("tbody", null, rows)))
+    );
+  }
+  // VillaDetail's own loading state, before we even know the villa's name
+  // -- guesses the default ("Knowledge base") tab shape underneath a
+  // skeleton of the page header and tab bar.
+  function SkeletonVillaPage() {
+    return e("div", { className: "page" },
+      e(Skel, { w: "70px", h: "11px", style: { marginBottom: "16px" } }),
+      e("div", { className: "page-head" },
+        e("div", null, e(Skel, { w: "220px", h: "22px", style: { marginBottom: "8px" } }), e(Skel, { w: "260px", h: "12px" }))
+      ),
+      e("div", { className: "tabs" }, [0, 1, 2, 3].map(function (i) {
+        return e(Skel, { key: i, w: "100px", h: "32px", style: { borderRadius: "9px", display: "inline-block", marginRight: "8px" } });
+      })),
+      e("div", { className: "tab-panel" }, e(SkeletonKnowledgeBase))
+    );
+  }
   function EmptyState(props) {
     return e("div", { className: "empty-state" },
       e("div", { className: "empty-icon" }, props.icon),
@@ -1237,7 +1345,13 @@
     var s2 = useState(""); var name = s2[0], setName = s2[1];
     var s3 = useState(false); var busy = s3[0], setBusy = s3[1];
 
-    if (villas === null) return e(LoadingBlock);
+    if (villas === null) return e("div", { className: "page" },
+      e("div", { className: "page-head" },
+        e("div", null, e("h1", { className: "page-title" }, "Your villas"), e("p", { className: "page-sub" }, "Manage the knowledge base and virtual concierge for each villa.")),
+        e(Button, { disabled: true }, "+ New villa")
+      ),
+      e(SkeletonVillaCards)
+    );
 
     function handleCreate(ev) {
       ev.preventDefault();
@@ -1595,7 +1709,7 @@
     var s4 = useState(null); var addEssentialKey = s4[0], setAddEssentialKey = s4[1];
     var s5 = useState(null); var addPrefillContent = s5[0], setAddPrefillContent = s5[1];
 
-    if (items === null) return e(LoadingBlock);
+    if (items === null) return e(SkeletonKnowledgeBase);
     var byCat = {};
     CATEGORIES.forEach(function (c) { byCat[c.id] = items.filter(function (i) { return i.category === c.id; }); });
     var filledCount = CATEGORIES.filter(function (c) { return byCat[c.id].length > 0; }).length;
@@ -1824,7 +1938,7 @@
       if (el) el.scrollIntoView({ behavior: "smooth", block: "center" });
     }, [convos, props.initialConvoId]);
 
-    if (convos === null) return e(LoadingBlock);
+    if (convos === null) return e(SkeletonConversationsPanel);
     if (convos.length === 0) return e(EmptyState, { icon: e(IconMessage, { size: 30 }), title: "No conversations yet", body: "As soon as a guest asks a question via the QR code, it will show up here." });
 
     var needing = convos.filter(function (c) { return c.needsHuman && !c.handled; });
@@ -1967,7 +2081,7 @@
     var cv = useConversations(true, villaId); var tabConvos = cv[0];
     var pendingCount = (tabConvos || []).filter(function (c) { return c.needsHuman && !c.handled; }).length;
 
-    if (villa === undefined) return e(LoadingBlock);
+    if (villa === undefined) return e(SkeletonVillaPage);
     if (villa === null) return e(EmptyState, {
       icon: e(IconHelp, { size: 30 }), title: "Villa not found", body: "This villa no longer exists or the link is incorrect.",
       action: e(Button, { onClick: function () { navigate({ screen: "dashboard" }); } }, "Back to villas")
@@ -2205,7 +2319,7 @@
         )
       ),
       error ? e("div", { className: "card" }, e("p", { className: "error-text" }, error)) : null,
-      !error && !data ? e(LoadingBlock) : null,
+      !error && !data ? e(SkeletonAdminPanel) : null,
       !error && data ? e("div", { className: "stack lg" },
         e("div", { className: "stats-row" },
           e(StatTile, { label: "Managers", value: data.stats.managers }),
