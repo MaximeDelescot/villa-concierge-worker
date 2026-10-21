@@ -154,7 +154,9 @@
 
   /* knowledge base */
   .essentials-card{ border-left:3px solid var(--accent); }
-  .essentials-head{ display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:4px; }
+  .essentials-head{ width:100%; display:flex; align-items:center; justify-content:space-between; gap:10px; background:none; border:none; cursor:pointer; text-align:left; padding:0; font:inherit; color:inherit; }
+  .essentials-head-left{ display:flex; align-items:center; gap:10px; flex-wrap:wrap; }
+  .essentials-head svg{ flex-shrink:0; transition:transform .15s ease; color:var(--ink-dim); }
   .essential-row{ display:flex; align-items:flex-start; justify-content:space-between; gap:14px; padding:10px 0; border-bottom:1px solid var(--border); }
   .essential-row:first-child{ padding-top:0; }
   .essential-row:last-child{ border-bottom:none; padding-bottom:0; }
@@ -174,6 +176,8 @@
   .gap-examples{ margin:0; padding-left:18px; color:var(--ink-dim); font-size:12.5px; line-height:1.5; }
   .gap-examples li{ margin-bottom:2px; }
   .kb-progress{ display:flex; flex-direction:column; gap:6px; font-size:12.5px; color:var(--ink-dim); }
+  .kb-group{ display:flex; flex-direction:column; gap:10px; }
+  .kb-group-title{ font-family:'IBM Plex Mono',monospace; font-size:11px; font-weight:500; text-transform:uppercase; letter-spacing:.07em; color:var(--ink-faint); margin:0 2px; }
   .progress-bar{ height:6px; background:var(--surface-2); border-radius:4px; overflow:hidden; }
   .progress-fill{ height:100%; background:var(--accent); border-radius:4px; }
   .cat-section{ border:1px solid var(--border); border-radius:12px; background:var(--surface); box-shadow:var(--shadow); overflow:hidden; }
@@ -359,6 +363,21 @@
   ];
   var CAT_BY_ID = {};
   CATEGORIES.forEach(function (c) { CAT_BY_ID[c.id] = c; });
+
+  // Display-only grouping of the categories above -- doesn't change their
+  // ids, labels, or how the AI classifies anything, just how they're laid
+  // out in the Knowledge base tab so related categories read as one
+  // section (e.g. a security deposit note sits under "Rules & security"
+  // alongside the villa's house rules, even though both are still plain
+  // "rules" items underneath).
+  var CATEGORY_GROUPS = [
+    { label: "Essentials", categories: ["general", "location", "checkinout", "wifi"] },
+    { label: "Villa & amenities", categories: ["equipment", "appliances", "ac", "entertainment", "pool"] },
+    { label: "Rules & security", categories: ["rules", "pets", "emergency"] },
+    { label: "Services & housekeeping", categories: ["services", "housekeeping"] },
+    { label: "Local area", categories: ["recommendations", "supermarkets", "beaches", "transport"] },
+    { label: "Contacts & other", categories: ["contacts", "custom"] }
+  ];
 
   var DEFAULT_TEMPLATE = {
     addLabel: "an item",
@@ -1189,10 +1208,13 @@
     var s1 = useState(function () {
       var v = initialValuesFor(tmpl, initial);
       // Only for a genuinely new item (no `initial`, so this can never be
-      // mistaken for editing an existing one) — pre-fills just the first
-      // field with a suggested title, nothing else, so the manager still
-      // writes the actual villa-specific details themselves.
+      // mistaken for editing an existing one). Title is always prefilled
+      // from the suggestion; content only comes along when the suggestion
+      // itself provided one -- which only happens for universal facts true
+      // for any villa (e.g. "tap water isn't drinkable"), never a guess
+      // about this specific villa. The manager can still edit or clear it.
       if (!initial && props.prefillTitle && tmpl.fields[0]) v[tmpl.fields[0].key] = props.prefillTitle;
+      if (!initial && props.prefillContent && tmpl.fields[1]) v[tmpl.fields[1].key] = props.prefillContent;
       return v;
     }); var values = s1[0], setValues = s1[1];
     var s3 = useState(function () {
@@ -1322,7 +1344,7 @@
           return e(KnowledgeItemRow, { key: it.id, item: it, villaId: props.villaId, onChanged: props.onChanged });
         }),
         props.adding
-          ? e(KnowledgeItemForm, { villaId: props.villaId, category: cat.id, prefillTitle: props.addPrefillTitle, onDone: props.onAdded, onCancel: props.onCancelAdd })
+          ? e(KnowledgeItemForm, { villaId: props.villaId, category: cat.id, prefillTitle: props.addPrefillTitle, prefillContent: props.addPrefillContent, onDone: props.onAdded, onCancel: props.onCancelAdd })
           : e(Button, { variant: "ghost", small: true, onClick: props.onAdd }, "+ Add " + (tmpl.addLabel || "an item"))
       ) : null
     );
@@ -1340,36 +1362,55 @@
   // villa's own region.
   var REGION_ESSENTIALS = {
     bali: [
-      { key: "drinking_water", category: "general", title: "Drinking water", hint: "Tap water isn't safe to drink in Indonesia — most international guests don't know this." },
-      { key: "power_outages", category: "general", title: "Power outages", hint: "Bali has occasional PLN power cuts — say whether there's a backup generator." },
-      { key: "offerings_etiquette", category: "general", title: "Canang sari offerings", hint: "Small daily offerings left on the ground are part of local ritual — guests should know not to step on them." },
-      { key: "nyepi", category: "general", title: "Nyepi (Day of Silence)", hint: "If the stay overlaps Nyepi, guests must stay indoors for 24h with no lights or noise — worth flagging well ahead of time." },
-      { key: "mosquitoes", category: "general", title: "Mosquitoes & dengue", hint: "A quick note on repellent goes a long way — dengue is present in Bali." },
-      { key: "water_heater", category: "appliances", title: "Hot water / water heater", hint: "Many villas need the heater switched on a few minutes before a hot shower works." },
-      { key: "gas_canister", category: "appliances", title: "Cooking gas", hint: "LPG gas canisters can run out mid-cooking — explain what to do and who to call." },
-      { key: "scooter_rental", category: "transport", title: "Scooter rental", hint: "Most guests want to rent a scooter — say where, and that an international license is technically required." },
-      { key: "ride_apps", category: "transport", title: "Ride & delivery apps", hint: "Gojek and Grab are how everyone gets around and orders food — worth a mention for first-time visitors." },
-      { key: "staff_schedule", category: "housekeeping", title: "On-site staff schedule", hint: "Guests aren't used to staff coming and going — say who, when, and how to reach them." },
-      { key: "deposit_policy", category: "rules", title: "Security deposit & payment", hint: "Avoid surprises at checkout — spell out the deposit amount and accepted payment methods." },
-      { key: "quiet_hours", category: "rules", title: "Noise & quiet hours", hint: "Especially relevant near residential neighborhoods — set expectations upfront." }
+      { key: "drinking_water", category: "general", title: "Drinking water", hint: "Tap water isn't safe to drink in Indonesia — most international guests don't know this.",
+        content: "Tap water in Bali isn't safe to drink straight from the tap. Please use the bottled or filtered water provided in the villa, and avoid ice made from tap water when eating out." },
+      { key: "power_outages", category: "general", title: "Power outages", hint: "Bali has occasional PLN power cuts — add whether this villa has a backup generator.",
+        content: "Bali's power grid (PLN) occasionally has brief outages, especially during the rainy season. They're usually short and resolve on their own." },
+      { key: "offerings_etiquette", category: "general", title: "Canang sari offerings", hint: "Small daily offerings left on the ground are part of local ritual — guests should know not to step on them.",
+        content: "You may see small daily offerings (canang sari) — palm-leaf baskets with flowers, rice and incense — placed on the ground or at shrines around the property and street. They're part of daily Balinese Hindu ritual. Please be respectful and avoid stepping on or disturbing them." },
+      { key: "nyepi", category: "general", title: "Nyepi (Day of Silence)", hint: "If the stay overlaps Nyepi, guests must stay indoors for 24h with no lights or noise — worth flagging well ahead of time.",
+        content: "Nyepi, the Balinese \"Day of Silence\", is an island-wide public holiday (usually in March) when everyone — residents and tourists alike — must stay indoors for 24 hours: no lights, no noise, and no travel (the airport closes too). If your stay overlaps Nyepi, please plan ahead, as this applies even to villa guests." },
+      { key: "mosquitoes", category: "general", title: "Mosquitoes & dengue", hint: "A quick note on repellent goes a long way — dengue is present in Bali.",
+        content: "Bali is tropical, so mosquitoes are present and there's a small risk of dengue fever. We recommend using mosquito repellent, especially around dawn and dusk, and keeping windows and doors closed or screened in the evening." },
+      { key: "gas_canister", category: "appliances", title: "Cooking gas", hint: "LPG gas canisters can run out mid-cooking — add who to call when it does.",
+        content: "Many Bali villas cook with LPG gas canisters rather than piped gas, so the canister can run out mid-use without warning." },
+      { key: "scooter_rental", category: "transport", title: "Scooter rental", hint: "Most guests want to rent a scooter — add where, on top of the general safety note already filled in.",
+        content: "Renting a scooter is a popular way to get around Bali. Note that an international driving permit for motorbikes is technically required, traffic can be busy, and helmets are mandatory — please ride carefully." },
+      { key: "ride_apps", category: "transport", title: "Ride & delivery apps", hint: "Gojek and Grab are how everyone gets around and orders food — worth a mention for first-time visitors.",
+        content: "Gojek and Grab are the two main ride-hailing and food delivery apps used across Bali. We recommend downloading one before your trip — they're the easiest way to get around and to order food to the villa." }
     ]
   };
 
-  function EssentialsChecklistCard(props) {
-    // Hardcoded until villas outside Bali exist -- see REGION_ESSENTIALS above.
-    var regionKey = "bali";
-    var regionLabel = "Bali";
+  // Not tied to any destination -- every rental anywhere benefits from
+  // these being spelled out, so they're suggested for every villa without
+  // the "Bali-specific" framing above.
+  var GENERAL_ESSENTIALS = [
+    { key: "water_heater", category: "appliances", title: "Hot water / water heater", hint: "Many villas need the heater switched on a few minutes before a hot shower works." },
+    { key: "staff_schedule", category: "housekeeping", title: "On-site staff schedule", hint: "Guests aren't used to staff coming and going — say who, when, and how to reach them." },
+    { key: "deposit_policy", category: "rules", title: "Security deposit & payment", hint: "Avoid surprises at checkout — spell out the deposit amount and accepted payment methods." },
+    { key: "quiet_hours", category: "rules", title: "Noise & quiet hours", hint: "Especially relevant near residential neighborhoods — set expectations upfront." }
+  ];
+
+  // Shared by both essentials cards below -- one badged as region-specific,
+  // one not. Collapsed by default: a dozen hint paragraphs on every page
+  // load is more than a manager needs to see before deciding to even look.
+  function EssentialsGroupCard(props) {
+    var s1 = useState(false); var open = s1[0], setOpen = s1[1];
     var dismissed = (props.villa && props.villa.checklistDismissed) || [];
-    var essentials = REGION_ESSENTIALS[regionKey] || [];
-    var remaining = essentials.filter(function (es) { return dismissed.indexOf(es.key) === -1; });
+    var remaining = (props.items || []).filter(function (es) { return dismissed.indexOf(es.key) === -1; });
     if (!remaining.length) return null;
     return e("div", { className: "card essentials-card" },
-      e("div", { className: "essentials-head" },
-        e("h3", { className: "block-title", style: { margin: 0 } }, "Local recommendations"),
-        e("span", { className: "admin-badge" }, "📍 " + regionLabel + "-specific")
+      e("button", { type: "button", className: "essentials-head", onClick: function () { setOpen(!open); } },
+        e("span", { className: "essentials-head-left" },
+          e("h3", { className: "block-title", style: { margin: 0 } }, props.title),
+          props.badge ? e("span", { className: "admin-badge" }, props.badge) : null,
+          e("span", { className: "muted small" }, remaining.length + " suggestion" + (remaining.length === 1 ? "" : "s"))
+        ),
+        e(IconChevronDown, { size: 15, style: open ? { transform: "rotate(180deg)" } : null })
       ),
-      e("p", { className: "muted small" }, "These aren't generic requirements — they're recommendations specific to " + regionLabel + ", based on what guests there commonly need to be told. Add what applies to your villa, dismiss what doesn't. Villas in other destinations will get their own locally-relevant list here."),
-      e("div", { className: "stack" }, remaining.map(function (es) {
+      open ? e("div", { className: "stack", style: { marginTop: "10px" } },
+        e("p", { className: "muted small" }, props.description),
+        remaining.map(function (es) {
         var cat = CAT_BY_ID[es.category];
         return e("div", { key: es.key, className: "essential-row" },
           e("div", { className: "essential-row-body" },
@@ -1381,7 +1422,7 @@
             e("button", { type: "button", className: "link-muted", onClick: function () { props.onDismiss(es.key); } }, "Not applicable")
           )
         );
-      }))
+      })) : null
     );
   }
 
@@ -1442,6 +1483,7 @@
     var s2 = useState(null); var addingCat = s2[0], setAddingCat = s2[1];
     var s3 = useState(null); var addPrefillTitle = s3[0], setAddPrefillTitle = s3[1];
     var s4 = useState(null); var addEssentialKey = s4[0], setAddEssentialKey = s4[1];
+    var s5 = useState(null); var addPrefillContent = s5[0], setAddPrefillContent = s5[1];
 
     if (items === null) return e(LoadingBlock);
     var byCat = {};
@@ -1461,6 +1503,7 @@
       setOpenCat(catId);
       setAddingCat(catId);
       setAddPrefillTitle(opts.prefillTitle || null);
+      setAddPrefillContent(opts.prefillContent || null);
       setAddEssentialKey(opts.essentialKey || null);
       setTimeout(function () {
         var el = document.getElementById("cat-" + catId);
@@ -1470,39 +1513,57 @@
     function handleCancelAdd() {
       setAddingCat(null);
       setAddPrefillTitle(null);
+      setAddPrefillContent(null);
       setAddEssentialKey(null);
     }
     function handleItemAdded() {
       var key = addEssentialKey;
       setAddingCat(null);
       setAddPrefillTitle(null);
+      setAddPrefillContent(null);
       setAddEssentialKey(null);
       if (key) dismissEssential(key);
       reload();
     }
     function handleAddEssential(es) {
-      handleAddToCategory(es.category, { prefillTitle: es.title, essentialKey: es.key });
+      handleAddToCategory(es.category, { prefillTitle: es.title, prefillContent: es.content, essentialKey: es.key });
     }
 
     return e("div", { className: "stack lg" },
-      e(EssentialsChecklistCard, { villa: villa, onAdd: handleAddEssential, onDismiss: dismissEssential }),
+      e(EssentialsGroupCard, {
+        villa: villa, items: GENERAL_ESSENTIALS, onAdd: handleAddEssential, onDismiss: dismissEssential,
+        title: "General suggestions", badge: null,
+        description: "Common gaps for any vacation rental, anywhere. Add what applies to your villa, dismiss what doesn't."
+      }),
+      e(EssentialsGroupCard, {
+        villa: villa, items: REGION_ESSENTIALS.bali, onAdd: handleAddEssential, onDismiss: dismissEssential,
+        title: "Local recommendations", badge: "📍 Bali-specific",
+        description: "These aren't generic requirements — they're recommendations specific to Bali, based on what guests there commonly need to be told. Villas in other destinations will get their own locally-relevant list here."
+      }),
       e(KnowledgeGapsCard, { gaps: gaps, onAddToCategory: handleAddToCategory }),
       e("div", { className: "kb-progress" },
         e("span", null, filledCount + " / " + CATEGORIES.length + " categories filled in"),
         e("div", { className: "progress-bar" }, e("div", { className: "progress-fill", style: { width: Math.round(filledCount / CATEGORIES.length * 100) + "%" } }))
       ),
-      CATEGORIES.map(function (c) {
-        return e(CategorySection, {
-          key: c.id, cat: c, items: byCat[c.id],
-          open: openCat === c.id, onToggle: function () { setOpenCat(openCat === c.id ? null : c.id); },
-          adding: addingCat === c.id,
-          addPrefillTitle: addingCat === c.id ? addPrefillTitle : null,
-          onAdd: function () { handleAddToCategory(c.id); },
-          onCancelAdd: handleCancelAdd,
-          onAdded: handleItemAdded,
-          onChanged: reload,
-          villaId: villaId
-        });
+      CATEGORY_GROUPS.map(function (g) {
+        return e("div", { key: g.label, className: "kb-group" },
+          e("h4", { className: "kb-group-title" }, g.label),
+          e("div", { className: "stack" }, g.categories.map(function (catId) {
+            var c = CAT_BY_ID[catId];
+            return e(CategorySection, {
+              key: c.id, cat: c, items: byCat[c.id],
+              open: openCat === c.id, onToggle: function () { setOpenCat(openCat === c.id ? null : c.id); },
+              adding: addingCat === c.id,
+              addPrefillTitle: addingCat === c.id ? addPrefillTitle : null,
+              addPrefillContent: addingCat === c.id ? addPrefillContent : null,
+              onAdd: function () { handleAddToCategory(c.id); },
+              onCancelAdd: handleCancelAdd,
+              onAdded: handleItemAdded,
+              onChanged: reload,
+              villaId: villaId
+            });
+          }))
+        );
       })
     );
   }
