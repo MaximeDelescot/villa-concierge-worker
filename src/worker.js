@@ -18,6 +18,7 @@
 //     POST   /api/auth/forgot-password          { email } -> { ok } (always)
 //     POST   /api/auth/reset-password           { token, password } -> { token, manager }
 //     GET    /api/auth/me                       -> { manager }
+//     GET    /api/admin/overview                 -> { stats, managers }  (admin only)
 //     GET    /api/villas
 //     POST   /api/villas                       { name }
 //     PATCH  /api/villas/:id                    { name }
@@ -658,6 +659,37 @@ function rowToVilla(r) {
   if (r.owner_email) out.ownerEmail = r.owner_email;
   if (r.pending_count !== undefined) out.pendingCount = r.pending_count || 0;
   return out;
+}
+
+// Admin-only overview: every manager account, plus a few headline numbers.
+// Read-only by design — no edit/disable/impersonate here. Useful for
+// basic "who's using this" visibility without having to query D1 by hand.
+async function adminOverview(env) {
+  const sevenDaysAgoIso = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
+  const [managersCount, villasCount, recentConvos, managerRows] = await Promise.all([
+    env.DB.prepare("SELECT COUNT(*) as n FROM managers").first(),
+    env.DB.prepare("SELECT COUNT(*) as n FROM villas").first(),
+    env.DB.prepare("SELECT COUNT(*) as n FROM conversations WHERE started_at >= ?").bind(sevenDaysAgoIso).first(),
+    env.DB.prepare(
+      "SELECT managers.id as id, managers.email as email, managers.created_at as created_at, managers.is_admin as is_admin, " +
+        "(SELECT COUNT(*) FROM villas WHERE villas.manager_id = managers.id) as villa_count " +
+        "FROM managers ORDER BY managers.created_at DESC"
+    ).all(),
+  ]);
+  return json({
+    stats: {
+      managers: (managersCount && managersCount.n) || 0,
+      villas: (villasCount && villasCount.n) || 0,
+      conversations7d: (recentConvos && recentConvos.n) || 0,
+    },
+    managers: managerRows.results.map((r) => ({
+      id: r.id,
+      email: r.email,
+      createdAt: r.created_at,
+      isAdmin: !!r.is_admin,
+      villaCount: r.villa_count || 0,
+    })),
+  });
 }
 
 async function createVilla(env, manager, body) {
@@ -1364,6 +1396,14 @@ export default {
         if (request.method === "GET") return json({ manager: auth.manager });
         if (request.method === "PATCH") return await updateManagerProfile(env, auth.manager.id, await readJson(request));
         return err(405, "method not allowed");
+      }
+
+      // /api/admin/overview  (admin only, read-only)
+      if (parts[1] === "admin" && parts[2] === "overview" && request.method === "GET") {
+        const auth = await requireAuth(request, env);
+        if (auth.errorResponse) return auth.errorResponse;
+        if (!auth.manager.isAdmin) return err(403, "forbidden");
+        return await adminOverview(env);
       }
 
       if (parts[1] === "villas") {
