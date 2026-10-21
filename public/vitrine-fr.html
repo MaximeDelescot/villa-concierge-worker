@@ -69,10 +69,6 @@
     --accent: #1f6f5c;
     --accent-ink: #ffffff;
     --gold: #b4842a;
-    --cat-indigo: #4a4f8c;
-    --cat-sage: #66762e;
-    --cat-sky: #2c7a96;
-    --cat-plum: #85486f;
     --warn: #b5561f;
     --warn-soft: #f6e4d6;
     --border: #e1ddd1;
@@ -92,10 +88,6 @@
       --accent: #49b695;
       --accent-ink: #0b1210;
       --gold: #d9a94b;
-      --cat-indigo: #9fa4e0;
-      --cat-sage: #a8c06c;
-      --cat-sky: #6fc4de;
-      --cat-plum: #d298c0;
       --warn: #e38a52;
       --warn-soft: #3a2a1d;
       --border: #303a31;
@@ -115,10 +107,6 @@
     --accent: #49b695;
     --accent-ink: #0b1210;
     --gold: #d9a94b;
-    --cat-indigo: #9fa4e0;
-    --cat-sage: #a8c06c;
-    --cat-sky: #6fc4de;
-    --cat-plum: #d298c0;
     --warn: #e38a52;
     --warn-soft: #3a2a1d;
     --border: #303a31;
@@ -579,6 +567,18 @@
     flex: none;
     width: 17px;
     height: 17px;
+  }
+
+  .kb-grid-item.more {
+    color: var(--ink-faint);
+    font-style: italic;
+  }
+
+  .kb-icon-placeholder {
+    flex: none;
+    width: 17px;
+    text-align: center;
+    font-weight: 600;
   }
 
   .kb-grid-item.custom {
@@ -1123,31 +1123,18 @@
       <p class="section-sub">24 catégories prêtes à l'emploi guident chaque villa — avec les bons champs déjà en place pour chacune, du réseau wifi aux contacts d'urgence. Une barre de progression indique ce qu'il reste à compléter.</p>
 
       <div class="kb-grid">
-        <div class="kb-grid-item"><svg class="kb-icon" viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="color:var(--accent)"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>Informations générales</div>
-        <div class="kb-grid-item"><svg class="kb-icon" viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="color:var(--accent)"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 1 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg>Adresse et localisation</div>
-        <div class="kb-grid-item"><svg class="kb-icon" viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="color:var(--accent)"><circle cx="7" cy="17" r="4"></circle><path d="M10.5 13.5L20 4"></path><path d="M16 8l3 3"></path><path d="M18.5 5.5l3 3"></path></svg>Check-in / Check-out</div>
-        <div class="kb-grid-item"><svg class="kb-icon" viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="color:var(--accent)"><path d="M5 12.55a11 11 0 0 1 14.08 0"></path><path d="M1.42 9a16 16 0 0 1 21.16 0"></path><path d="M8.53 16.11a6 6 0 0 1 6.95 0"></path><line x1="12" y1="20" x2="12.01" y2="20"></line></svg>WiFi</div>
-        <div class="kb-grid-item"><svg class="kb-icon" viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="color:var(--gold)"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"></path></svg>Équipements</div>
-        <div class="kb-grid-item"><svg class="kb-icon" viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="color:var(--gold)"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path><polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline><line x1="12" y1="22.08" x2="12" y2="12"></line></svg>Appareils électroménagers</div>
-        <div class="kb-grid-item"><svg class="kb-icon" viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="color:var(--gold)"><path d="M9.59 4.59A2 2 0 1 1 11 8H2"></path><path d="M12.59 19.41A2 2 0 1 0 14 16H2"></path><path d="M17.73 7.73A2.5 2.5 0 1 1 19.5 12H2"></path></svg>Climatisation</div>
-        <div class="kb-grid-item"><svg class="kb-icon" viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="color:var(--gold)"><rect x="2" y="7" width="20" height="15" rx="2" ry="2"></rect><polyline points="17 2 12 7 7 2"></polyline></svg>TV / Divertissement</div>
-        <div class="kb-grid-item"><svg class="kb-icon" viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="color:var(--gold)"><path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z"></path></svg>Piscine</div>
-        <div class="kb-grid-item"><svg class="kb-icon" viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="color:var(--gold)"><path d="M14 14.76V3.5a2.5 2.5 0 0 0-5 0v11.26a4.5 4.5 0 1 0 5 0z"></path></svg>Eau chaude</div>
-        <div class="kb-grid-item"><svg class="kb-icon" viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="color:var(--cat-indigo)"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path><rect x="8" y="2" width="8" height="4" rx="1" ry="1"></rect></svg>Règles de la villa</div>
-        <div class="kb-grid-item"><svg class="kb-icon" viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="color:var(--cat-indigo)"><circle cx="7.5" cy="9.5" r="1.6"></circle><circle cx="12" cy="7" r="1.6"></circle><circle cx="16.5" cy="9.5" r="1.6"></circle><circle cx="18.3" cy="14" r="1.6"></circle><path d="M12 14.2c-3.2 0-5.4 2-5.4 4.4 0 1.7 1.5 2.4 3 1.7.8-.4 1.6-.6 2.4-.6s1.6.2 2.4.6c1.5.7 3 0 3-1.7 0-2.4-2.2-4.4-5.4-4.4z"></path></svg>Animaux de compagnie</div>
-        <div class="kb-grid-item"><svg class="kb-icon" viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="color:var(--cat-indigo)"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>Informations d'urgence</div>
-        <div class="kb-grid-item"><svg class="kb-icon" viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="color:var(--cat-indigo)"><line x1="12" y1="1" x2="12" y2="23"></line><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path></svg>Caution et paiement</div>
-        <div class="kb-grid-item"><svg class="kb-icon" viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="color:var(--cat-indigo)"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>Bruit et horaires de silence</div>
-        <div class="kb-grid-item"><svg class="kb-icon" viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="color:var(--cat-sage)"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"></path><path d="M13.73 21a2 2 0 0 1-3.46 0"></path></svg>Services disponibles</div>
-        <div class="kb-grid-item"><svg class="kb-icon" viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="color:var(--cat-sage)"><polyline points="23 4 23 10 17 10"></polyline><polyline points="1 20 1 14 7 14"></polyline><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path></svg>Housekeeping</div>
-        <div class="kb-grid-item"><svg class="kb-icon" viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="color:var(--cat-sage)"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>Personnel sur place</div>
-        <div class="kb-grid-item"><svg class="kb-icon" viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="color:var(--cat-sky)"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>Recommandations locales</div>
-        <div class="kb-grid-item"><svg class="kb-icon" viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="color:var(--cat-sky)"><circle cx="9" cy="21" r="1"></circle><circle cx="20" cy="21" r="1"></circle><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"></path></svg>Supermarchés</div>
-        <div class="kb-grid-item"><svg class="kb-icon" viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="color:var(--cat-sky)"><circle cx="12" cy="12" r="10"></circle><polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76"></polygon></svg>Points d'intérêt</div>
-        <div class="kb-grid-item"><svg class="kb-icon" viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="color:var(--cat-sky)"><rect x="1" y="3" width="15" height="13"></rect><polygon points="16 8 20 8 23 11 23 16 16 16 16 8"></polygon><circle cx="5.5" cy="18.5" r="2.5"></circle><circle cx="18.5" cy="18.5" r="2.5"></circle></svg>Transports</div>
-        <div class="kb-grid-item"><svg class="kb-icon" viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="color:var(--cat-sky)"><path d="M12 2l8.5 6H3.5z"></path><line x1="5" y1="10" x2="5" y2="20"></line><line x1="9.5" y1="10" x2="9.5" y2="20"></line><line x1="14.5" y1="10" x2="14.5" y2="20"></line><line x1="19" y1="10" x2="19" y2="20"></line><line x1="3" y1="20" x2="21" y2="20"></line></svg>Spécificités culturelles</div>
-        <div class="kb-grid-item"><svg class="kb-icon" viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="color:var(--cat-plum)"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"></path></svg>Contacts importants</div>
-        <div class="kb-grid-item custom"><svg class="kb-icon" viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="color:var(--cat-plum)"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>Questions personnalisées</div>
+        <div class="kb-grid-item"><svg class="kb-icon" viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 1 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg>Adresse et localisation</div>
+        <div class="kb-grid-item"><svg class="kb-icon" viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.55a11 11 0 0 1 14.08 0"></path><path d="M1.42 9a16 16 0 0 1 21.16 0"></path><path d="M8.53 16.11a6 6 0 0 1 6.95 0"></path><line x1="12" y1="20" x2="12.01" y2="20"></line></svg>WiFi</div>
+        <div class="kb-grid-item"><svg class="kb-icon" viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="7" cy="17" r="4"></circle><path d="M10.5 13.5L20 4"></path><path d="M16 8l3 3"></path><path d="M18.5 5.5l3 3"></path></svg>Check-in / Check-out</div>
+        <div class="kb-grid-item"><svg class="kb-icon" viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z"></path></svg>Piscine</div>
+        <div class="kb-grid-item"><svg class="kb-icon" viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9.59 4.59A2 2 0 1 1 11 8H2"></path><path d="M12.59 19.41A2 2 0 1 0 14 16H2"></path><path d="M17.73 7.73A2.5 2.5 0 1 1 19.5 12H2"></path></svg>Climatisation</div>
+        <div class="kb-grid-item"><svg class="kb-icon" viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>Informations d'urgence</div>
+        <div class="kb-grid-item"><svg class="kb-icon" viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"></polyline><polyline points="1 20 1 14 7 14"></polyline><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path></svg>Housekeeping</div>
+        <div class="kb-grid-item"><svg class="kb-icon" viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>Recommandations locales</div>
+        <div class="kb-grid-item"><svg class="kb-icon" viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2l8.5 6H3.5z"></path><line x1="5" y1="10" x2="5" y2="20"></line><line x1="9.5" y1="10" x2="9.5" y2="20"></line><line x1="14.5" y1="10" x2="14.5" y2="20"></line><line x1="19" y1="10" x2="19" y2="20"></line><line x1="3" y1="20" x2="21" y2="20"></line></svg>Spécificités culturelles</div>
+        <div class="kb-grid-item"><svg class="kb-icon" viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"></path></svg>Contacts importants</div>
+        <div class="kb-grid-item more"><span class="kb-icon-placeholder">+</span>+ 14 autres catégories</div>
+        <div class="kb-grid-item custom"><svg class="kb-icon" viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>Questions personnalisées</div>
       </div>
 
       <div class="kb-progress-demo">
